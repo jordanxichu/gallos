@@ -197,7 +197,7 @@ class PdfService {
                 _buildPdfHeaderCell('Peso'),
                 _buildPdfHeaderCell('Anillo'),
                 _buildPdfHeaderCell('VERDE', color: PdfColors.green700),
-                _buildPdfHeaderCell('Resultado'),
+                _buildPdfHeaderCell('Resultado/Tiempo'),
               ],
             ),
             // Filas de peleas
@@ -365,7 +365,6 @@ class PdfService {
     bool esEmpate,
   ) {
     if (!mostrarResultados || !pelea.tieneResultado) {
-      // Celda vacía con líneas para anotar
       return pw.Container(
         padding: const pw.EdgeInsets.all(4),
         child: pw.Container(
@@ -397,23 +396,43 @@ class PdfService {
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(3),
-      child: pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-        decoration: pw.BoxDecoration(
-          color: bgColor,
-          borderRadius: pw.BorderRadius.circular(3),
-        ),
-        child: pw.Text(
-          texto,
-          textAlign: pw.TextAlign.center,
-          style: pw.TextStyle(
-            fontSize: 7,
-            fontWeight: pw.FontWeight.bold,
-            color: textColor,
+      child: pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            decoration: pw.BoxDecoration(
+              color: bgColor,
+              borderRadius: pw.BorderRadius.circular(3),
+            ),
+            child: pw.Text(
+              texto,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(
+                fontSize: 7,
+                fontWeight: pw.FontWeight.bold,
+                color: textColor,
+              ),
+            ),
           ),
-        ),
+          if (pelea.duracionSegundos != null)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 2),
+              child: pw.Text(
+                _formatearDuracionPelea(pelea.duracionSegundos!),
+                textAlign: pw.TextAlign.center,
+                style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  static String _formatearDuracionPelea(int segundos) {
+    final mins = segundos ~/ 60;
+    final secs = segundos % 60;
+    return '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   /// Guarda el PDF en Desktop y retorna la ruta.
@@ -430,10 +449,35 @@ class PdfService {
     
     await file.writeAsBytes(bytes);
     
-    // Abrir el archivo con la app predeterminada del sistema
-    await Process.run('open', [file.path]);
+    // Intentar abrir el archivo con la app predeterminada del sistema
+    // (si falla, igual retornamos la ruta para no romper la exportación)
+    await _abrirArchivo(file.path);
     
     return file.path;
+  }
+
+  static Future<void> _abrirArchivo(String filePath) async {
+    try {
+      if (Platform.isMacOS) {
+        await Process.run('open', [filePath]);
+        return;
+      }
+
+      if (Platform.isWindows) {
+        await Process.run(
+          'cmd',
+          ['/c', 'start', '', filePath],
+          runInShell: true,
+        );
+        return;
+      }
+
+      if (Platform.isLinux) {
+        await Process.run('xdg-open', [filePath]);
+      }
+    } catch (_) {
+      // No bloquear la exportación si la apertura automática falla.
+    }
   }
 
   // === BUILDERS PRIVADOS ===
