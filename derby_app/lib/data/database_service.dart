@@ -34,6 +34,7 @@ class DatabaseService {
         DerbyDbSchema,
         RondaDbSchema,
         PeleaDbSchema,
+        LicenseDbSchema,
       ],
       directory: dir.path,
       name: 'derby_manager',

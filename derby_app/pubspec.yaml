@@ -47,6 +47,11 @@ dependencies:
   pdf: ^3.11.0
   printing: ^5.13.0
 
+  # Cryptographic license system
+  pointycastle: ^3.9.1
+  crypto: ^3.0.6
+  device_info_plus: ^11.2.0
+
   # Motor matemático del sistema de derbys
   derby_engine:
     path: ../derby_engine

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:derby_engine/derby_engine.dart';
 import '../viewmodels/viewmodels.dart';
+import '../services/license_manager.dart';
 
 /// Pantalla de configuración del derby.
 class ConfiguracionScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   late TextEditingController _puntosVictoriaController;
   late TextEditingController _puntosDerrotaController;
   late TextEditingController _puntosEmpateController;
+  late TextEditingController _codigoLicenciaController;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     _puntosEmpateController = TextEditingController(
       text: '${config.puntosEmpate}',
     );
+    _codigoLicenciaController = TextEditingController();
   }
 
   @override
@@ -46,6 +50,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     _puntosVictoriaController.dispose();
     _puntosDerrotaController.dispose();
     _puntosEmpateController.dispose();
+    _codigoLicenciaController.dispose();
     super.dispose();
   }
 
@@ -180,6 +185,129 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
                 const SizedBox(height: 32),
 
+                _buildSeccion('Licencia', [
+                  Row(
+                    children: [
+                      Icon(
+                        state.licenciaPro ? Icons.verified : Icons.warning_amber,
+                        color: state.licenciaPro ? Colors.green : Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              state.licenciaPro
+                                  ? '${state.licencia.typeName} - Activa'
+                                  : 'Modo Demo (Limitado)',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            if (state.licenciaPro && state.licencia.expiresAt != null)
+                              Text(
+                                'Expira: ${_formatearFecha(state.licencia.expiresAt!)} (${state.diasLicenciaRestantes} días)',
+                                style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                              ),
+                            if (state.licenciaDemo)
+                              Text(
+                                'Limitaciones: máx ${state.maxParticipantesDemo} participantes, ${state.maxRondasDemo} ronda, sin PDF',
+                                style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Mostrar huella del dispositivo
+                  if (state.huellaDispositivo.isNotEmpty)
+                    InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: state.huellaDispositivo.substring(0, 8).toUpperCase()));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('ID de dispositivo copiado')),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          const Icon(Icons.fingerprint, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            'ID Dispositivo: ${state.huellaDispositivo.substring(0, 8).toUpperCase()}',
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.copy, size: 14, color: Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _codigoLicenciaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Código de activación',
+                      hintText: 'DERBY-xxxxxxxx.xxxxxxxx',
+                      prefixIcon: Icon(Icons.vpn_key),
+                    ),
+                    maxLines: 3,
+                    minLines: 1,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _activarLicencia(context, state),
+                        icon: const Icon(Icons.lock_open),
+                        label: const Text('Activar licencia'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: state.licenciaDemo
+                            ? null
+                            : () => _desactivarLicencia(context, state),
+                        icon: const Icon(Icons.lock_reset),
+                        label: const Text('Desactivar'),
+                      ),
+                    ],
+                  ),
+                ]),
+
+                const SizedBox(height: 32),
+
+                _buildSeccion('Backup del Torneo', [
+                  const Text(
+                    'Exporta todos los datos del derby actual a un archivo JSON.',
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _exportarBackup(context, state),
+                    icon: const Icon(Icons.backup),
+                    label: const Text('Exportar backup JSON'),
+                  ),
+                ]),
+
+                const SizedBox(height: 32),
+
+                _buildSeccion('Historial de Modificaciones', [
+                  if (state.historialEventos.isEmpty)
+                    const Text('Sin cambios registrados todavía.'),
+                  if (state.historialEventos.isNotEmpty)
+                    ...state.historialEventos.take(20).map(
+                      (evento) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.history, size: 18),
+                        title: Text(evento.descripcion),
+                        subtitle: Text(
+                          '${evento.tipo.toUpperCase()} · ${_formatearFechaHora(evento.timestamp)}',
+                        ),
+                      ),
+                    ),
+                ]),
+
+                const SizedBox(height: 32),
+
                 // Botón guardar
                 Center(
                   child: ElevatedButton.icon(
@@ -304,5 +432,57 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Configuración guardada')));
     }
+  }
+
+  Future<void> _activarLicencia(BuildContext context, DerbyState state) async {
+    final result = await state.activarLicencia(_codigoLicenciaController.text);
+    if (!context.mounted) return;
+
+    final isSuccess = result == ActivationResult.success;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(state.getMensajeActivacion(result)),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+      ),
+    );
+    
+    if (isSuccess) {
+      _codigoLicenciaController.clear();
+    }
+  }
+
+  Future<void> _desactivarLicencia(BuildContext context, DerbyState state) async {
+    await state.desactivarLicencia();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Licencia desactivada')),
+    );
+  }
+
+  Future<void> _exportarBackup(BuildContext context, DerbyState state) async {
+    try {
+      final path = await state.exportarTorneoJson();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Backup exportado: $path')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error exportando backup: $e')),
+      );
+    }
+  }
+
+  String _formatearFecha(DateTime fecha) {
+    return '${fecha.day.toString().padLeft(2, '0')}/'
+        '${fecha.month.toString().padLeft(2, '0')}/'
+        '${fecha.year}';
+  }
+
+  String _formatearFechaHora(DateTime fecha) {
+    return '${_formatearFecha(fecha)} '
+        '${fecha.hour.toString().padLeft(2, '0')}:'
+        '${fecha.minute.toString().padLeft(2, '0')}';
   }
 }

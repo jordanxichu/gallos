@@ -21,7 +21,7 @@ class SorteoScreen extends StatelessWidget {
                   tooltip: 'Exportar PDF',
                   onPressed: () => _exportarPdf(context, state),
                 ),
-              if (state.sorteoRealizado)
+              if (state.sorteoRealizado || state.tienePreview)
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Nuevo Sorteo',
@@ -36,7 +36,7 @@ class SorteoScreen extends StatelessWidget {
           ),
           body: state.cargando
               ? _buildProcesando()
-              : state.sorteoRealizado
+              : (state.sorteoRealizado || state.tienePreview)
               ? _buildResultados(context, state)
               : _buildPreSorteo(context, state),
         );
@@ -168,10 +168,10 @@ class SorteoScreen extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: puedeIniciar ? () => state.ejecutarSorteo() : null,
-              icon: const Icon(Icons.play_arrow, size: 28),
+              onPressed: puedeIniciar ? () => state.generarPreviewSorteo() : null,
+              icon: const Icon(Icons.visibility, size: 28),
               label: const Text(
-                'INICIAR SORTEO',
+                'GENERAR PREVIEW',
                 style: TextStyle(fontSize: 18),
               ),
             ),
@@ -221,7 +221,8 @@ class SorteoScreen extends StatelessWidget {
   }
 
   Widget _buildResultados(BuildContext context, DerbyState state) {
-    final rondasVM = state.rondasVM;
+    final rondasVM = state.rondasMostradasVM;
+    final enPreview = !state.sorteoRealizado && state.tienePreview;
 
     return Row(
       children: [
@@ -270,49 +271,75 @@ class SorteoScreen extends StatelessWidget {
               children: [
                 // Resumen
                 Card(
-                  color: Colors.green.shade50,
+                  color: enPreview ? Colors.amber.shade50 : Colors.green.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
+                        Icon(
+                          enPreview ? Icons.visibility : Icons.check_circle,
+                          color: enPreview ? Colors.amber.shade700 : Colors.green,
                           size: 32,
                         ),
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Sorteo Completado',
+                            Text(
+                              enPreview ? 'Preview de Sorteo' : 'Sorteo Completado',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
                             ),
                             Text(
-                              '${state.totalRondas} rondas, ${state.totalPeleas} peleas generadas',
+                              enPreview
+                                  ? '${state.totalRondasMostradas} rondas generadas (sin confirmar)'
+                                  : '${state.totalRondas} rondas, ${state.totalPeleas} peleas generadas',
                               style: TextStyle(color: Colors.grey.shade700),
                             ),
                           ],
                         ),
                         const Spacer(),
-                        OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.print),
-                          label: const Text('Imprimir'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.picture_as_pdf),
-                          label: const Text('Exportar PDF'),
-                        ),
+                        if (!enPreview)
+                          ElevatedButton.icon(
+                            onPressed: () => _exportarPdf(context, state),
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text('Exportar PDF'),
+                          ),
                       ],
                     ),
                   ),
                 ),
+
+                if (enPreview) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => state.descartarPreviewSorteo(),
+                        icon: const Icon(Icons.close),
+                        label: const Text('Descartar Preview'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => state.aprobarPreviewSorteo(),
+                        icon: const Icon(Icons.check),
+                        label: const Text('Aprobar Rondas'),
+                      ),
+                      const SizedBox(width: 12),
+                      if (state.previewGeneradoEn != null)
+                        Text(
+                          'Generado: '
+                          '${state.previewGeneradoEn!.day.toString().padLeft(2, '0')}/'
+                          '${state.previewGeneradoEn!.month.toString().padLeft(2, '0')} '
+                          '${state.previewGeneradoEn!.hour.toString().padLeft(2, '0')}:'
+                          '${state.previewGeneradoEn!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 
@@ -333,7 +360,7 @@ class SorteoScreen extends StatelessWidget {
   }
 
   Widget _buildTablaPeleas(BuildContext context, DerbyState state) {
-    final rondaVM = state.rondaActualVM!;
+    final rondaVM = state.rondaMostradaVM!;
     final config = state.config;
 
     return SingleChildScrollView(
@@ -502,9 +529,10 @@ class SorteoScreen extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Nuevo Sorteo'),
-        content: const Text(
-          '¿Estás seguro de realizar un nuevo sorteo?\n'
-          'Se descartará el sorteo actual.',
+        content: Text(
+          state.tienePreview && !state.sorteoRealizado
+              ? '¿Deseas descartar el preview actual?'
+              : '¿Estás seguro de realizar un nuevo sorteo?\nSe descartará el sorteo actual.',
         ),
         actions: [
           TextButton(
@@ -514,9 +542,13 @@ class SorteoScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              state.limpiarSorteo();
+              if (state.tienePreview && !state.sorteoRealizado) {
+                state.descartarPreviewSorteo();
+              } else {
+                state.limpiarSorteo();
+              }
             },
-            child: const Text('Nuevo Sorteo'),
+            child: Text(state.tienePreview && !state.sorteoRealizado ? 'Descartar' : 'Nuevo Sorteo'),
           ),
         ],
       ),
