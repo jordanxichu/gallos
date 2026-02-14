@@ -1,0 +1,22 @@
+.DS_Store
+*.log
+
+# Dart/Flutter
+**/.dart_tool/
+**/.packages
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+
+# IDE
+.idea/
+.vscode/
+
+# Flutter platform outputs
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Pods/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
