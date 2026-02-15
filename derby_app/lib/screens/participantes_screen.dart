@@ -25,7 +25,13 @@ class ParticipantesScreen extends StatelessWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _mostrarFormulario(context, state),
+            onPressed: () {
+              if (!state.puedeAgregarParticipante) {
+                _mostrarMensajeLicencia(context, state.maxParticipantesDemo);
+                return;
+              }
+              _mostrarFormulario(context, state);
+            },
             icon: const Icon(Icons.person_add),
             label: const Text('Agregar'),
           ),
@@ -59,7 +65,13 @@ class ParticipantesScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => _mostrarFormulario(context, state),
+            onPressed: () {
+              if (!state.puedeAgregarParticipante) {
+                _mostrarMensajeLicencia(context, state.maxParticipantesDemo);
+                return;
+              }
+              _mostrarFormulario(context, state);
+            },
             icon: const Icon(Icons.add),
             label: const Text('Agregar Participante'),
           ),
@@ -244,6 +256,12 @@ class ParticipantesScreen extends StatelessWidget {
                   ),
                 );
               } else {
+                if (!state.puedeAgregarParticipante) {
+                  Navigator.pop(dialogContext);
+                  _mostrarMensajeLicencia(context, state.maxParticipantesDemo);
+                  return;
+                }
+
                 state.agregarParticipante(
                   Participante(
                     id: 'p${DateTime.now().millisecondsSinceEpoch}',
@@ -272,6 +290,17 @@ class ParticipantesScreen extends StatelessWidget {
             child: Text(esEdicion ? 'Guardar' : 'Agregar'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _mostrarMensajeLicencia(BuildContext context, int maxParticipantesDemo) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Modo demo: máximo $maxParticipantesDemo participantes. Activa licencia Pro.',
+        ),
+        backgroundColor: Colors.orange,
       ),
     );
   }

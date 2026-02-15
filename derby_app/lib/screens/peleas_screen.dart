@@ -31,7 +31,13 @@ class PeleasScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.picture_as_pdf),
                 tooltip: 'Exportar ronda a PDF',
-                onPressed: () => _exportarRondaPdf(context, state),
+                onPressed: () {
+                  if (!state.permitePdf) {
+                    _mostrarMensajePdfBloqueado(context);
+                    return;
+                  }
+                  _exportarRondaPdf(context, state);
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.description_outlined),
@@ -501,6 +507,11 @@ class PeleasScreen extends StatelessWidget {
   }
 
   Future<void> _exportarRondaPdf(BuildContext context, DerbyState state) async {
+    if (!state.permitePdf) {
+      _mostrarMensajePdfBloqueado(context);
+      return;
+    }
+
     try {
       await PdfService.exportarBrackets(
         state,
@@ -524,6 +535,15 @@ class PeleasScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _mostrarMensajePdfBloqueado(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exportar PDF requiere licencia Pro activa.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   String _formatearDuracion(int segundos) {

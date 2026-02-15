@@ -213,7 +213,13 @@ class DashboardScreen extends StatelessWidget {
                       icon: Icons.picture_as_pdf,
                       label: 'Exportar PDF',
                       onPressed: state.sorteoRealizado
-                          ? () => _mostrarOpcionesPdf(context, state)
+                          ? () {
+                              if (!state.permitePdf) {
+                                _mostrarMensajePdfBloqueado(context);
+                                return;
+                              }
+                              _mostrarOpcionesPdf(context, state);
+                            }
                           : null,
                     ),
                     _ActionButton(
@@ -373,6 +379,11 @@ class DashboardScreen extends StatelessWidget {
   }
 
   void _mostrarOpcionesPdf(BuildContext context, DerbyState state) {
+    if (!state.permitePdf) {
+      _mostrarMensajePdfBloqueado(context);
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -418,6 +429,11 @@ class DashboardScreen extends StatelessWidget {
     DerbyState state,
     String tipo,
   ) async {
+    if (!state.permitePdf) {
+      _mostrarMensajePdfBloqueado(context);
+      return;
+    }
+
     try {
       switch (tipo) {
         case 'completo':
@@ -454,6 +470,15 @@ class DashboardScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _mostrarMensajePdfBloqueado(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exportar PDF requiere licencia Pro activa.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 }
 

@@ -19,7 +19,13 @@ class SorteoScreen extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.picture_as_pdf),
                   tooltip: 'Exportar PDF',
-                  onPressed: () => _exportarPdf(context, state),
+                  onPressed: () {
+                    if (!state.permitePdf) {
+                      _mostrarMensajePdfBloqueado(context);
+                      return;
+                    }
+                    _exportarPdf(context, state);
+                  },
                 ),
               if (state.sorteoRealizado || state.tienePreview)
                 IconButton(
@@ -303,7 +309,13 @@ class SorteoScreen extends StatelessWidget {
                         const Spacer(),
                         if (!enPreview)
                           ElevatedButton.icon(
-                            onPressed: () => _exportarPdf(context, state),
+                            onPressed: () {
+                              if (!state.permitePdf) {
+                                _mostrarMensajePdfBloqueado(context);
+                                return;
+                              }
+                              _exportarPdf(context, state);
+                            },
                             icon: const Icon(Icons.picture_as_pdf),
                             label: const Text('Exportar PDF'),
                           ),
@@ -556,6 +568,11 @@ class SorteoScreen extends StatelessWidget {
   }
 
   Future<void> _exportarPdf(BuildContext context, DerbyState state) async {
+    if (!state.permitePdf) {
+      _mostrarMensajePdfBloqueado(context);
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -615,6 +632,15 @@ class SorteoScreen extends StatelessWidget {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  void _mostrarMensajePdfBloqueado(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exportar PDF requiere licencia Pro activa.'),
+        backgroundColor: Colors.orange,
       ),
     );
   }

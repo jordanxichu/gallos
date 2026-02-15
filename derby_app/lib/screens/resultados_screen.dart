@@ -72,6 +72,16 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                 onSelected: (value) async {
                   switch (value) {
                     case 'pdf':
+                      if (!state.permitePdf) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Exportar PDF requiere licencia Pro activa.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        break;
+                      }
+
                       try {
                         await PdfService.exportarDerbyCompleto(state);
                         if (context.mounted) {
@@ -98,6 +108,16 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                       );
                       break;
                     case 'print':
+                      if (!state.permitePdf) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Imprimir requiere licencia Pro activa.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        break;
+                      }
+
                       try {
                         await PdfService.exportarDerbyCompleto(state);
                         if (context.mounted) {

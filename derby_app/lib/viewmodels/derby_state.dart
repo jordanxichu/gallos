@@ -60,6 +60,8 @@ class DerbyState extends ChangeNotifier {
   bool get permiteBackup => _licenseManager?.allowBackup ?? false;
   int get maxParticipantesDemo => _licenseManager?.maxParticipantesDemo ?? 2;
   int get maxRondasDemo => _licenseManager?.maxRondasDemo ?? 1;
+  bool get puedeAgregarParticipante =>
+      _licenseManager?.canAddParticipante(_participantes.length) ?? true;
 
   // === Getters de datos crudos (para el engine) ===
   Derby? get derby => _derby;
@@ -202,6 +204,12 @@ class DerbyState extends ChangeNotifier {
   // === Acciones de Participantes ===
 
   Future<void> agregarParticipante(Participante participante) async {
+    if (!puedeAgregarParticipante) {
+      throw StateError(
+        'Modo demo: máximo $maxParticipantesDemo participantes. Activa licencia Pro.',
+      );
+    }
+
     _participantes.add(participante);
     notifyListeners();
     await _repo.guardarParticipante(participante);
