@@ -74,6 +74,44 @@ class ParticipanteVM {
   /// Número de compadres
   int get totalCompadres => compadres.length;
 
+  /// Gallos activos (no retirados ni descalificados)
+  List<Gallo> get gallosActivos => gallos
+      .where(
+        (g) =>
+            g.estado != EstadoGallo.retirado &&
+            g.estado != EstadoGallo.descalificado,
+      )
+      .toList();
+
+  /// Gallos retirados del torneo
+  List<Gallo> get gallosRetirados =>
+      gallos.where((g) => g.estado == EstadoGallo.retirado).toList();
+
+  /// Gallos descalificados
+  List<Gallo> get gallosDescalificados =>
+      gallos.where((g) => g.estado == EstadoGallo.descalificado).toList();
+
+  /// Indica si todos los gallos fueron descalificados
+  bool get todosDescalificados =>
+      gallos.isNotEmpty &&
+      gallos.every((g) => g.estado == EstadoGallo.descalificado);
+
+  /// Indica si todos los gallos están fuera del torneo (retirados o descalificados)
+  bool get todosFueraDelTorneo =>
+      gallos.isNotEmpty &&
+      gallos.every(
+        (g) =>
+            g.estado == EstadoGallo.retirado ||
+            g.estado == EstadoGallo.descalificado,
+      );
+
+  /// Badge de estado para mostrar en UI (vacío si tiene gallos activos)
+  String get estadoBadge {
+    if (todosDescalificados) return '🚫 DESCALIFICADO';
+    if (todosFueraDelTorneo) return '⛔ SIN GALLOS';
+    return '';
+  }
+
   /// Crea ParticipanteVM desde Participante con datos enriquecidos.
   factory ParticipanteVM.fromParticipante(
     Participante participante, {

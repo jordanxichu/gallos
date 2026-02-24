@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:isar/isar.dart';
 import 'package:pointycastle/export.dart';
 
@@ -9,14 +10,14 @@ import 'device_fingerprint.dart';
 
 /// Resultado de la activación de licencia
 enum ActivationResult {
-  success,           // Activación exitosa
-  invalidFormat,     // Formato del código inválido
-  invalidSignature,  // Firma RSA no válida
-  expired,           // Licencia ya expiró
-  deviceMismatch,    // No coincide con el dispositivo autorizado
-  alreadyActivated,  // Ya hay una licencia activa
-  revoked,           // Licencia fue revocada
-  parseError,        // Error al parsear datos
+  success, // Activación exitosa
+  invalidFormat, // Formato del código inválido
+  invalidSignature, // Firma RSA no válida
+  expired, // Licencia ya expiró
+  deviceMismatch, // No coincide con el dispositivo autorizado
+  alreadyActivated, // Ya hay una licencia activa
+  revoked, // Licencia fue revocada
+  parseError, // Error al parsear datos
 }
 
 /// Información de la licencia activa (inmutable, para UI)
@@ -69,7 +70,7 @@ class LicenseStatus {
 }
 
 /// Gestor central del sistema de licencias comerciales.
-/// 
+///
 /// Responsabilidades:
 /// - Verificar firmas RSA de licencias
 /// - Validar vinculación a dispositivo
@@ -84,11 +85,11 @@ class LicenseManager {
 
   // ══════════════════════════════════════════════════════════════════════════
   // CLAVE PÚBLICA RSA (2048 bits)
-  // 
+  //
   // La clave privada correspondiente está en el admin tool externo.
   // NO incluir nunca la clave privada en el código de la app.
   // ══════════════════════════════════════════════════════════════════════════
-  
+
   // Clave pública RSA-2048 generada por license_tool
   static const String _publicKeyPem = '''
 -----BEGIN PUBLIC KEY-----
@@ -169,12 +170,12 @@ TwIDAQAB
   // ══════════════════════════════════════════════════════════════════════════
 
   /// Activa una licencia a partir del código proporcionado.
-  /// 
+  ///
   /// El código de licencia tiene el formato:
   /// ```
   /// DERBY-{base64_payload}.{base64_signature}
   /// ```
-  /// 
+  ///
   /// Donde payload es JSON con:
   /// - licenseId: ID único
   /// - type: demo/monthly/annual/lifetime
@@ -184,6 +185,41 @@ TwIDAQAB
   /// - holderName: nombre del titular (opcional)
   /// - holderEmail: email (opcional)
   Future<ActivationResult> activate(String licenseCode) async {
+    // ── DEBUG BYPASS ────────────────────────────────────────────────────────
+    // En builds de debug se acepta el código especial DERBY-DEBUG para activar
+    // una licencia de por vida sin verificación RSA. Solo disponible en
+    // kDebugMode; queda completamente inactivo en release builds.
+    if (kDebugMode && licenseCode.trim().toUpperCase() == 'DERBY-DEBUG') {
+      // Generar ID único para evitar conflictos de índice
+      final licId = 'DEBUG-${DateTime.now().microsecondsSinceEpoch}';
+
+      final debugLicense = LicenseDb()
+        ..licenseId = licId
+        ..type = LicenseType.lifetime
+        ..holderName = 'Modo Debug'
+        ..holderEmail = null
+        ..issuedAt = DateTime.now()
+        ..expiresAt = null
+        ..deviceFingerprint = _deviceFingerprint ?? ''
+        ..licensePayload = ''
+        ..signature = ''
+        ..activatedAt = DateTime.now();
+
+      // Limpiar TODA la colección con clear() en transacción separada
+      await _isar.writeTxn(() async {
+        await _isar.licenseDbs.clear();
+      });
+
+      // Insertar nueva licencia en transacción separada
+      await _isar.writeTxn(() async {
+        await _isar.licenseDbs.put(debugLicense);
+      });
+
+      _currentLicense = debugLicense;
+      return ActivationResult.success;
+    }
+    // ── FIN DEBUG BYPASS ────────────────────────────────────────────────────
+
     try {
       // 1. Parsear el código de licencia
       final parsed = _parseLicenseCode(licenseCode);
@@ -233,15 +269,17 @@ TwIDAQAB
         ..activatedAt = DateTime.now();
 
       // 7. Guardar en Isar (reemplazar licencia anterior)
-      await _isar.writeTxn(() async {
-        // Marcar licencias anteriores como no activas (opcional: eliminar)
-        await _isar.licenseDbs.clear();
-        await _isar.licenseDbs.put(license);
-      });
+      // Eliminar todas las licencias existentes primero para evitar conflictos
+      // de índice único.
+      final existentes = await _isar.licenseDbs.where().findAll();
+      if (existentes.isNotEmpty) {
+        final ids = existentes.map((l) => l.id).toList();
+        await _isar.writeTxn(() => _isar.licenseDbs.deleteAll(ids));
+      }
+      await _isar.writeTxn(() => _isar.licenseDbs.put(license));
 
       _currentLicense = license;
       return ActivationResult.success;
-
     } catch (e) {
       return ActivationResult.parseError;
     }
@@ -250,18 +288,15 @@ TwIDAQAB
   /// Parsea el código de licencia en payload y signature.
   Map<String, String>? _parseLicenseCode(String code) {
     final normalized = code.trim();
-    
+
     // Formato: DERBY-{payload}.{signature}
     if (!normalized.startsWith('DERBY-')) return null;
-    
+
     final content = normalized.substring(6); // Quitar "DERBY-"
     final parts = content.split('.');
     if (parts.length != 2) return null;
 
-    return {
-      'payload': parts[0],
-      'signature': parts[1],
-    };
+    return {'payload': parts[0], 'signature': parts[1]};
   }
 
   /// Verifica la firma RSA del payload.
@@ -290,40 +325,41 @@ TwIDAQAB
   RSAPublicKey? _parsePublicKey(String pem) {
     try {
       // Remover headers PEM
-      final lines = pem.split('\n')
+      final lines = pem
+          .split('\n')
           .where((line) => !line.startsWith('-----') && line.trim().isNotEmpty)
           .join();
-      
+
       final keyBytes = base64Decode(lines);
-      
+
       // Parse SubjectPublicKeyInfo manually to extract RSAPublicKey
       int offset = 0;
-      
+
       // Skip outer SEQUENCE tag and length
       if (keyBytes[offset] != 0x30) return null;
       offset++;
       offset = _skipLength(keyBytes, offset);
-      
+
       // Skip algorithm SEQUENCE
       if (keyBytes[offset] != 0x30) return null;
       offset++;
       final algLen = _readLength(keyBytes, offset);
       offset = _skipLength(keyBytes, offset);
       offset += algLen;
-      
+
       // Now we're at BIT STRING
       if (keyBytes[offset] != 0x03) return null;
       offset++;
       offset = _skipLength(keyBytes, offset);
-      
+
       // Skip unused bits byte
       offset++;
-      
+
       // Now parse RSAPublicKey SEQUENCE
       if (keyBytes[offset] != 0x30) return null;
       offset++;
       offset = _skipLength(keyBytes, offset);
-      
+
       // Read modulus (INTEGER)
       if (keyBytes[offset] != 0x02) return null;
       offset++;
@@ -332,7 +368,7 @@ TwIDAQAB
       final modBytes = keyBytes.sublist(offset, offset + modLen);
       final modulus = _bytesToBigInt(modBytes);
       offset += modLen;
-      
+
       // Read exponent (INTEGER)
       if (keyBytes[offset] != 0x02) return null;
       offset++;
@@ -340,13 +376,13 @@ TwIDAQAB
       offset = _skipLength(keyBytes, offset);
       final expBytes = keyBytes.sublist(offset, offset + expLen);
       final exponent = _bytesToBigInt(expBytes);
-      
+
       return RSAPublicKey(modulus, exponent);
     } catch (e) {
       return null;
     }
   }
-  
+
   int _skipLength(List<int> bytes, int offset) {
     if (bytes[offset] < 0x80) {
       return offset + 1;

@@ -17,48 +17,53 @@ const ParticipanteDbSchema = CollectionSchema(
   name: r'ParticipanteDb',
   id: 8446553726317401070,
   properties: {
-    r'createdAt': PropertySchema(
+    r'compadres': PropertySchema(
       id: 0,
+      name: r'compadres',
+      type: IsarType.stringList,
+    ),
+    r'createdAt': PropertySchema(
+      id: 1,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'equipo': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'equipo',
       type: IsarType.string,
     ),
     r'nombre': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'nombre',
       type: IsarType.string,
     ),
     r'peleasEmpatadas': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'peleasEmpatadas',
       type: IsarType.long,
     ),
     r'peleasGanadas': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'peleasGanadas',
       type: IsarType.long,
     ),
     r'peleasPerdidas': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'peleasPerdidas',
       type: IsarType.long,
     ),
     r'puntosTotales': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'puntosTotales',
       type: IsarType.long,
     ),
     r'telefono': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'telefono',
       type: IsarType.string,
     ),
     r'uid': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'uid',
       type: IsarType.string,
     )
@@ -72,7 +77,7 @@ const ParticipanteDbSchema = CollectionSchema(
     r'uid': IndexSchema(
       id: 8193695471701937315,
       name: r'uid',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -97,6 +102,13 @@ int _participanteDbEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.compadres.length * 3;
+  {
+    for (var i = 0; i < object.compadres.length; i++) {
+      final value = object.compadres[i];
+      bytesCount += value.length * 3;
+    }
+  }
   {
     final value = object.equipo;
     if (value != null) {
@@ -120,15 +132,16 @@ void _participanteDbSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.createdAt);
-  writer.writeString(offsets[1], object.equipo);
-  writer.writeString(offsets[2], object.nombre);
-  writer.writeLong(offsets[3], object.peleasEmpatadas);
-  writer.writeLong(offsets[4], object.peleasGanadas);
-  writer.writeLong(offsets[5], object.peleasPerdidas);
-  writer.writeLong(offsets[6], object.puntosTotales);
-  writer.writeString(offsets[7], object.telefono);
-  writer.writeString(offsets[8], object.uid);
+  writer.writeStringList(offsets[0], object.compadres);
+  writer.writeDateTime(offsets[1], object.createdAt);
+  writer.writeString(offsets[2], object.equipo);
+  writer.writeString(offsets[3], object.nombre);
+  writer.writeLong(offsets[4], object.peleasEmpatadas);
+  writer.writeLong(offsets[5], object.peleasGanadas);
+  writer.writeLong(offsets[6], object.peleasPerdidas);
+  writer.writeLong(offsets[7], object.puntosTotales);
+  writer.writeString(offsets[8], object.telefono);
+  writer.writeString(offsets[9], object.uid);
 }
 
 ParticipanteDb _participanteDbDeserialize(
@@ -138,16 +151,17 @@ ParticipanteDb _participanteDbDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = ParticipanteDb();
-  object.createdAt = reader.readDateTime(offsets[0]);
-  object.equipo = reader.readStringOrNull(offsets[1]);
+  object.compadres = reader.readStringList(offsets[0]) ?? [];
+  object.createdAt = reader.readDateTime(offsets[1]);
+  object.equipo = reader.readStringOrNull(offsets[2]);
   object.id = id;
-  object.nombre = reader.readString(offsets[2]);
-  object.peleasEmpatadas = reader.readLong(offsets[3]);
-  object.peleasGanadas = reader.readLong(offsets[4]);
-  object.peleasPerdidas = reader.readLong(offsets[5]);
-  object.puntosTotales = reader.readLong(offsets[6]);
-  object.telefono = reader.readStringOrNull(offsets[7]);
-  object.uid = reader.readString(offsets[8]);
+  object.nombre = reader.readString(offsets[3]);
+  object.peleasEmpatadas = reader.readLong(offsets[4]);
+  object.peleasGanadas = reader.readLong(offsets[5]);
+  object.peleasPerdidas = reader.readLong(offsets[6]);
+  object.puntosTotales = reader.readLong(offsets[7]);
+  object.telefono = reader.readStringOrNull(offsets[8]);
+  object.uid = reader.readString(offsets[9]);
   return object;
 }
 
@@ -159,13 +173,13 @@ P _participanteDbDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 1:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readLong(offset)) as P;
     case 5:
@@ -173,8 +187,10 @@ P _participanteDbDeserializeProp<P>(
     case 6:
       return (reader.readLong(offset)) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -192,61 +208,6 @@ List<IsarLinkBase<dynamic>> _participanteDbGetLinks(ParticipanteDb object) {
 void _participanteDbAttach(
     IsarCollection<dynamic> col, Id id, ParticipanteDb object) {
   object.id = id;
-}
-
-extension ParticipanteDbByIndex on IsarCollection<ParticipanteDb> {
-  Future<ParticipanteDb?> getByUid(String uid) {
-    return getByIndex(r'uid', [uid]);
-  }
-
-  ParticipanteDb? getByUidSync(String uid) {
-    return getByIndexSync(r'uid', [uid]);
-  }
-
-  Future<bool> deleteByUid(String uid) {
-    return deleteByIndex(r'uid', [uid]);
-  }
-
-  bool deleteByUidSync(String uid) {
-    return deleteByIndexSync(r'uid', [uid]);
-  }
-
-  Future<List<ParticipanteDb?>> getAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uid', values);
-  }
-
-  List<ParticipanteDb?> getAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uid', values);
-  }
-
-  Future<int> deleteAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uid', values);
-  }
-
-  int deleteAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uid', values);
-  }
-
-  Future<Id> putByUid(ParticipanteDb object) {
-    return putByIndex(r'uid', object);
-  }
-
-  Id putByUidSync(ParticipanteDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUid(List<ParticipanteDb> objects) {
-    return putAllByIndex(r'uid', objects);
-  }
-
-  List<Id> putAllByUidSync(List<ParticipanteDb> objects,
-      {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uid', objects, saveLinks: saveLinks);
-  }
 }
 
 extension ParticipanteDbQueryWhereSort
@@ -377,6 +338,231 @@ extension ParticipanteDbQueryWhere
 
 extension ParticipanteDbQueryFilter
     on QueryBuilder<ParticipanteDb, ParticipanteDb, QFilterCondition> {
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'compadres',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'compadres',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'compadres',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'compadres',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'compadres',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
+      compadresLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'compadres',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<ParticipanteDb, ParticipanteDb, QAfterFilterCondition>
       createdAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
@@ -1560,6 +1746,13 @@ extension ParticipanteDbQuerySortThenBy
 extension ParticipanteDbQueryWhereDistinct
     on QueryBuilder<ParticipanteDb, ParticipanteDb, QDistinct> {
   QueryBuilder<ParticipanteDb, ParticipanteDb, QDistinct>
+      distinctByCompadres() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'compadres');
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, ParticipanteDb, QDistinct>
       distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
@@ -1628,6 +1821,13 @@ extension ParticipanteDbQueryProperty
   QueryBuilder<ParticipanteDb, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<ParticipanteDb, List<String>, QQueryOperations>
+      compadresProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'compadres');
     });
   }
 

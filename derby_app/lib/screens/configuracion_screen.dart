@@ -189,7 +189,9 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   Row(
                     children: [
                       Icon(
-                        state.licenciaPro ? Icons.verified : Icons.warning_amber,
+                        state.licenciaPro
+                            ? Icons.verified
+                            : Icons.warning_amber,
                         color: state.licenciaPro ? Colors.green : Colors.orange,
                       ),
                       const SizedBox(width: 8),
@@ -201,17 +203,26 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                               state.licenciaPro
                                   ? '${state.licencia.typeName} - Activa'
                                   : 'Modo Demo (Limitado)',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            if (state.licenciaPro && state.licencia.expiresAt != null)
+                            if (state.licenciaPro &&
+                                state.licencia.expiresAt != null)
                               Text(
                                 'Expira: ${_formatearFecha(state.licencia.expiresAt!)} (${state.diasLicenciaRestantes} días)',
-                                style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontSize: 12,
+                                ),
                               ),
                             if (state.licenciaDemo)
                               Text(
                                 'Limitaciones: máx ${state.maxParticipantesDemo} participantes, ${state.maxRondasDemo} ronda, sin PDF',
-                                style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 12,
+                                ),
                               ),
                           ],
                         ),
@@ -223,9 +234,17 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   if (state.huellaDispositivo.isNotEmpty)
                     InkWell(
                       onTap: () {
-                        Clipboard.setData(ClipboardData(text: state.huellaDispositivo.substring(0, 8).toUpperCase()));
+                        Clipboard.setData(
+                          ClipboardData(
+                            text: state.huellaDispositivo
+                                .substring(0, 8)
+                                .toUpperCase(),
+                          ),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('ID de dispositivo copiado')),
+                          const SnackBar(
+                            content: Text('ID de dispositivo copiado'),
+                          ),
                         );
                       },
                       child: Row(
@@ -234,10 +253,17 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                           const SizedBox(width: 4),
                           Text(
                             'ID Dispositivo: ${state.huellaDispositivo.substring(0, 8).toUpperCase()}',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.copy, size: 14, color: Colors.grey.shade400),
+                          Icon(
+                            Icons.copy,
+                            size: 14,
+                            color: Colors.grey.shade400,
+                          ),
                         ],
                       ),
                     ),
@@ -280,10 +306,21 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                     'Exporta todos los datos del derby actual a un archivo JSON.',
                   ),
                   const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => _exportarBackup(context, state),
-                    icon: const Icon(Icons.backup),
-                    label: const Text('Exportar backup JSON'),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _exportarBackup(context, state),
+                        icon: const Icon(Icons.backup),
+                        label: const Text('Exportar backup JSON'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _importarBackup(context, state),
+                        icon: const Icon(Icons.restore),
+                        label: const Text('Importar backup'),
+                      ),
+                    ],
                   ),
                 ]),
 
@@ -293,17 +330,19 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   if (state.historialEventos.isEmpty)
                     const Text('Sin cambios registrados todavía.'),
                   if (state.historialEventos.isNotEmpty)
-                    ...state.historialEventos.take(20).map(
-                      (evento) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.history, size: 18),
-                        title: Text(evento.descripcion),
-                        subtitle: Text(
-                          '${evento.tipo.toUpperCase()} · ${_formatearFechaHora(evento.timestamp)}',
+                    ...state.historialEventos
+                        .take(20)
+                        .map(
+                          (evento) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.history, size: 18),
+                            title: Text(evento.descripcion),
+                            subtitle: Text(
+                              '${evento.tipo.toUpperCase()} · ${_formatearFechaHora(evento.timestamp)}',
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                 ]),
 
                 const SizedBox(height: 32),
@@ -445,31 +484,121 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
         backgroundColor: isSuccess ? Colors.green : Colors.red,
       ),
     );
-    
+
     if (isSuccess) {
       _codigoLicenciaController.clear();
     }
   }
 
-  Future<void> _desactivarLicencia(BuildContext context, DerbyState state) async {
+  Future<void> _desactivarLicencia(
+    BuildContext context,
+    DerbyState state,
+  ) async {
     await state.desactivarLicencia();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Licencia desactivada')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Licencia desactivada')));
   }
 
   Future<void> _exportarBackup(BuildContext context, DerbyState state) async {
     try {
       final path = await state.exportarTorneoJson();
       if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Backup exportado: $path')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error exportando backup: $e')));
+    }
+  }
+
+  Future<void> _importarBackup(BuildContext context, DerbyState state) async {
+    // Confirmación con doble verificación
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Importar Backup'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '⚠️ ADVERTENCIA: Esta acción reemplazará TODOS los datos actuales.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 16),
+            Text('• Todos los participantes actuales serán sobrescritos'),
+            Text('• Todos los gallos actuales serán sobrescritos'),
+            Text('• Todas las rondas y resultados serán sobrescritos'),
+            SizedBox(height: 16),
+            Text('¿Estás seguro de que deseas continuar?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sí, importar backup'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await state.importarTorneoJson();
+      if (!context.mounted) return;
+
+      if (state.error != null && state.error!.contains('advertencias')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.error!),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        state.limpiarError();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Backup importado correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on StateError catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Backup exportado: $path')),
+        SnackBar(
+          content: Text('Error: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error exportando backup: $e')),
+        SnackBar(
+          content: Text('Error importando backup: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

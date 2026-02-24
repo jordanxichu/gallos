@@ -4,10 +4,10 @@ part 'license_db.g.dart';
 
 /// Tipos de licencia disponibles
 enum LicenseType {
-  demo,    // Modo demo con limitaciones
+  demo, // Modo demo con limitaciones
   monthly, // Licencia mensual
-  annual,  // Licencia anual
-  lifetime // Licencia de por vida
+  annual, // Licencia anual
+  lifetime, // Licencia de por vida
 }
 
 /// Modelo Isar para persistir licencia comercial con firma criptográfica.
@@ -16,7 +16,7 @@ class LicenseDb {
   Id id = Isar.autoIncrement;
 
   /// Identificador único de la licencia emitida
-  @Index(unique: true)
+  @Index()
   late String licenseId;
 
   /// Tipo de licencia (índice del enum)

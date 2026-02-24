@@ -37,11 +37,22 @@ class SeedData {
 
   /// Prefijos para anillos
   static const _prefijosAnillo = [
-    'RG', 'GP', 'EO', 'SF', 'PM', 'TP', 'CT', 'HR', 'MR', 'CQ', 'SM', 'JL'
+    'RG',
+    'GP',
+    'EO',
+    'SF',
+    'PM',
+    'TP',
+    'CT',
+    'HR',
+    'MR',
+    'CQ',
+    'SM',
+    'JL',
   ];
 
   /// Genera datos de prueba completos.
-  /// 
+  ///
   /// [numParticipantes] - Número de participantes (default: 8)
   /// [gallosPorParticipante] - Gallos por participante (default: 4)
   static Future<void> poblarDatos(
@@ -56,7 +67,11 @@ class SeedData {
     // Mezclar nombres para variedad
     final nombresDisponibles = List<String>.from(_nombres)..shuffle(_random);
 
-    for (int i = 0; i < numParticipantes && i < nombresDisponibles.length; i++) {
+    for (
+      int i = 0;
+      i < numParticipantes && i < nombresDisponibles.length;
+      i++
+    ) {
       // Crear participante
       final participante = Participante(
         id: 'p_${i + 1}_${DateTime.now().millisecondsSinceEpoch}',
@@ -85,7 +100,9 @@ class SeedData {
     }
 
     final totalGallos = numParticipantes * gallosPorParticipante;
-    debugPrint('✅ Seed completado: $numParticipantes participantes, $totalGallos gallos');
+    debugPrint(
+      '✅ Seed completado: $numParticipantes participantes, $totalGallos gallos',
+    );
   }
 
   /// Genera un peso aleatorio realista (1800-2400g con distribución normal)
@@ -108,7 +125,7 @@ class SeedData {
   /// Limpia todos los datos existentes y genera nuevos.
   static Future<void> resetearYPoblar(DerbyState state) async {
     debugPrint('🗑️ Limpiando datos existentes...');
-    
+
     // Limpiar sorteo si existe
     if (state.sorteoRealizado) {
       await state.limpiarSorteo();
@@ -133,6 +150,9 @@ class SeedData {
   /// Datos de prueba predefinidos (siempre los mismos para debugging)
   static Future<void> poblarDeterministico(DerbyState state) async {
     debugPrint('🌱 Poblando con datos determinísticos...');
+
+    // Usar timestamp para generar IDs únicos y evitar colisiones
+    final ts = DateTime.now().millisecondsSinceEpoch;
 
     final participantesData = [
       ('Don Chuy García', 'Jalisco', '33-123-4567'),
@@ -159,9 +179,9 @@ class SeedData {
 
     for (int i = 0; i < participantesData.length; i++) {
       final (nombre, equipo, telefono) = participantesData[i];
-      
+
       final participante = Participante(
-        id: 'p_${i + 1}',
+        id: 'p_${ts}_${i + 1}',
         nombre: nombre,
         equipo: equipo,
         telefono: telefono,
@@ -173,7 +193,7 @@ class SeedData {
       final prefijoAnillo = _prefijosAnillo[i];
       for (int j = 0; j < pesosGallos[i].length; j++) {
         final gallo = Gallo(
-          id: 'g_${i + 1}_${j + 1}',
+          id: 'g_${ts}_${i + 1}_${j + 1}',
           participanteId: participante.id,
           peso: pesosGallos[i][j],
           anillo: '$prefijoAnillo-${(i + 1) * 100 + j + 1}',

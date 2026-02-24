@@ -87,7 +87,7 @@ const DerbyDbSchema = CollectionSchema(
     r'uid': IndexSchema(
       id: 8193695471701937315,
       name: r'uid',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -213,60 +213,6 @@ List<IsarLinkBase<dynamic>> _derbyDbGetLinks(DerbyDb object) {
 
 void _derbyDbAttach(IsarCollection<dynamic> col, Id id, DerbyDb object) {
   object.id = id;
-}
-
-extension DerbyDbByIndex on IsarCollection<DerbyDb> {
-  Future<DerbyDb?> getByUid(String uid) {
-    return getByIndex(r'uid', [uid]);
-  }
-
-  DerbyDb? getByUidSync(String uid) {
-    return getByIndexSync(r'uid', [uid]);
-  }
-
-  Future<bool> deleteByUid(String uid) {
-    return deleteByIndex(r'uid', [uid]);
-  }
-
-  bool deleteByUidSync(String uid) {
-    return deleteByIndexSync(r'uid', [uid]);
-  }
-
-  Future<List<DerbyDb?>> getAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uid', values);
-  }
-
-  List<DerbyDb?> getAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uid', values);
-  }
-
-  Future<int> deleteAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uid', values);
-  }
-
-  int deleteAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uid', values);
-  }
-
-  Future<Id> putByUid(DerbyDb object) {
-    return putByIndex(r'uid', object);
-  }
-
-  Id putByUidSync(DerbyDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUid(List<DerbyDb> objects) {
-    return putAllByIndex(r'uid', objects);
-  }
-
-  List<Id> putAllByUidSync(List<DerbyDb> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uid', objects, saveLinks: saveLinks);
-  }
 }
 
 extension DerbyDbQueryWhereSort on QueryBuilder<DerbyDb, DerbyDb, QWhere> {
@@ -1968,7 +1914,7 @@ const RondaDbSchema = CollectionSchema(
     r'uid': IndexSchema(
       id: 8193695471701937315,
       name: r'uid',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -2077,60 +2023,6 @@ List<IsarLinkBase<dynamic>> _rondaDbGetLinks(RondaDb object) {
 
 void _rondaDbAttach(IsarCollection<dynamic> col, Id id, RondaDb object) {
   object.id = id;
-}
-
-extension RondaDbByIndex on IsarCollection<RondaDb> {
-  Future<RondaDb?> getByUid(String uid) {
-    return getByIndex(r'uid', [uid]);
-  }
-
-  RondaDb? getByUidSync(String uid) {
-    return getByIndexSync(r'uid', [uid]);
-  }
-
-  Future<bool> deleteByUid(String uid) {
-    return deleteByIndex(r'uid', [uid]);
-  }
-
-  bool deleteByUidSync(String uid) {
-    return deleteByIndexSync(r'uid', [uid]);
-  }
-
-  Future<List<RondaDb?>> getAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uid', values);
-  }
-
-  List<RondaDb?> getAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uid', values);
-  }
-
-  Future<int> deleteAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uid', values);
-  }
-
-  int deleteAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uid', values);
-  }
-
-  Future<Id> putByUid(RondaDb object) {
-    return putByIndex(r'uid', object);
-  }
-
-  Id putByUidSync(RondaDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUid(List<RondaDb> objects) {
-    return putAllByIndex(r'uid', objects);
-  }
-
-  List<Id> putAllByUidSync(List<RondaDb> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uid', objects, saveLinks: saveLinks);
-  }
 }
 
 extension RondaDbQueryWhereSort on QueryBuilder<RondaDb, RondaDb, QWhere> {
@@ -3201,7 +3093,7 @@ const PeleaDbSchema = CollectionSchema(
     r'uid': IndexSchema(
       id: 8193695471701937315,
       name: r'uid',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -3340,60 +3232,6 @@ List<IsarLinkBase<dynamic>> _peleaDbGetLinks(PeleaDb object) {
 
 void _peleaDbAttach(IsarCollection<dynamic> col, Id id, PeleaDb object) {
   object.id = id;
-}
-
-extension PeleaDbByIndex on IsarCollection<PeleaDb> {
-  Future<PeleaDb?> getByUid(String uid) {
-    return getByIndex(r'uid', [uid]);
-  }
-
-  PeleaDb? getByUidSync(String uid) {
-    return getByIndexSync(r'uid', [uid]);
-  }
-
-  Future<bool> deleteByUid(String uid) {
-    return deleteByIndex(r'uid', [uid]);
-  }
-
-  bool deleteByUidSync(String uid) {
-    return deleteByIndexSync(r'uid', [uid]);
-  }
-
-  Future<List<PeleaDb?>> getAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uid', values);
-  }
-
-  List<PeleaDb?> getAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uid', values);
-  }
-
-  Future<int> deleteAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uid', values);
-  }
-
-  int deleteAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uid', values);
-  }
-
-  Future<Id> putByUid(PeleaDb object) {
-    return putByIndex(r'uid', object);
-  }
-
-  Id putByUidSync(PeleaDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUid(List<PeleaDb> objects) {
-    return putAllByIndex(r'uid', objects);
-  }
-
-  List<Id> putAllByUidSync(List<PeleaDb> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uid', objects, saveLinks: saveLinks);
-  }
 }
 
 extension PeleaDbQueryWhereSort on QueryBuilder<PeleaDb, PeleaDb, QWhere> {

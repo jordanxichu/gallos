@@ -30,16 +30,26 @@ class RondaVM {
   bool get bloqueada => ronda.bloqueada;
   int get totalPeleas => ronda.totalPeleas;
   int get peleasFinalizadas => ronda.peleasFinalizadas;
+  int get peleasCanceladas => ronda.peleasCanceladas;
+  int get peleasTerminadas => ronda.peleasTerminadas;
   bool get todasFinalizadas => ronda.todasFinalizadas;
 
   // === Campos de presentación ===
 
-  /// Número de peleas pendientes
-  int get peleasPendientes => totalPeleas - peleasFinalizadas;
+  /// Peleas activas (no canceladas) para UI que necesita solo las disputadas
+  List<PeleaVM> get peleasActivasVM =>
+      peleasVM.where((p) => !p.cancelada).toList();
 
-  /// Porcentaje de progreso (0-100)
+  /// Peleas canceladas
+  List<PeleaVM> get peleasCanceladasVM =>
+      peleasVM.where((p) => p.cancelada).toList();
+
+  /// Número de peleas pendientes (ni finalizadas ni canceladas)
+  int get peleasPendientes => ronda.peleasPendientes;
+
+  /// Porcentaje de progreso (0-100) - basado en peleas terminadas
   int get porcentajeProgreso =>
-      totalPeleas > 0 ? (peleasFinalizadas * 100 ~/ totalPeleas) : 0;
+      totalPeleas > 0 ? (peleasTerminadas * 100 ~/ totalPeleas) : 0;
 
   /// Label del estado
   String get estadoLabel {
@@ -53,8 +63,17 @@ class RondaVM {
     }
   }
 
-  /// Label resumido para lista
-  String get resumenLabel => '$peleasFinalizadas/$totalPeleas peleas';
+  /// Label resumido para lista (terminadas incluye canceladas)
+  String get resumenLabel => '$peleasTerminadas/$totalPeleas peleas';
+
+  /// Resumen detallado: "16 peleas programadas • 15 realizadas • 1 cancelada"
+  String get resumenDetallado {
+    final partes = <String>['$totalPeleas programadas'];
+    if (peleasFinalizadas > 0) partes.add('$peleasFinalizadas realizadas');
+    if (peleasCanceladas > 0) partes.add('$peleasCanceladas canceladas');
+    if (peleasPendientes > 0) partes.add('$peleasPendientes pendientes');
+    return partes.join(' • ');
+  }
 
   /// Número de gallos sin cotejo
   int get totalSinCotejo => sinCotejo.length;
@@ -72,7 +91,7 @@ class RondaVM {
     required List<Gallo> gallos,
     required List<Participante> participantes,
   }) {
-    // Convertir peleas a PeleaVM
+    // INCLUIR todas las peleas (activas + canceladas) para visibilidad completa
     final peleasVM = ronda.peleas.map((p) {
       return PeleaVM.fromPelea(
         p,

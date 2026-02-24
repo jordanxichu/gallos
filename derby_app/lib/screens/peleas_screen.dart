@@ -62,7 +62,10 @@ class PeleasScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.skip_next),
                 tooltip: 'Siguiente ronda',
-                onPressed: state.rondaSeleccionada < state.totalRondas - 1
+                // Solo permitir avanzar si la ronda actual está bloqueada (completada)
+                onPressed:
+                    state.rondaSeleccionada < state.totalRondas - 1 &&
+                        rondaVM.bloqueada
                     ? () => state.siguienteRonda()
                     : null,
               ),
@@ -107,8 +110,41 @@ class PeleasScreen extends StatelessWidget {
     DerbyState state,
     RondaVM rondaVM,
   ) {
+    final rondaBloqueada = rondaVM.bloqueada;
+
     return Column(
       children: [
+        // P0-2: Banner de ronda bloqueada
+        if (rondaBloqueada)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: Colors.orange.shade100,
+            child: Row(
+              children: [
+                Icon(Icons.lock, color: Colors.orange.shade800),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Ronda bloqueada - No se pueden modificar resultados',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _confirmarDesbloqueo(context, state),
+                  icon: Icon(Icons.lock_open, color: Colors.orange.shade800),
+                  label: Text(
+                    'Desbloquear',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Barra de progreso
         Container(
           padding: const EdgeInsets.all(16),
@@ -125,9 +161,17 @@ class PeleasScreen extends StatelessWidget {
                           'Progreso de la ronda',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
+                        if (rondaBloqueada) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.lock,
+                            size: 16,
+                            color: Colors.orange.shade700,
+                          ),
+                        ],
                         const Spacer(),
                         Text(
-                          '${rondaVM.peleasFinalizadas} / ${rondaVM.totalPeleas}',
+                          '${rondaVM.peleasTerminadas} / ${rondaVM.totalPeleas}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -136,24 +180,70 @@ class PeleasScreen extends StatelessWidget {
                     LinearProgressIndicator(
                       value: rondaVM.totalPeleas == 0
                           ? 0
-                          : rondaVM.peleasFinalizadas / rondaVM.totalPeleas,
+                          : rondaVM.peleasTerminadas / rondaVM.totalPeleas,
                       backgroundColor: Colors.grey.shade300,
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 16),
-              if (rondaVM.todasFinalizadas)
-                ElevatedButton.icon(
-                  onPressed: state.rondaSeleccionada < state.totalRondas - 1
-                      ? () => state.siguienteRonda()
-                      : null,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Siguiente Ronda'),
-                ),
+              if (rondaVM.todasFinalizadas) ...[
+                if (state.rondaSeleccionada < state.totalRondas - 1)
+                  ElevatedButton.icon(
+                    onPressed: () => state.siguienteRonda(),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Siguiente Ronda'),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade400),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.emoji_events, color: Colors.green.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Derby Finalizado ✅',
+                          style: TextStyle(
+                            color: Colors.green.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
+
+        // Resumen de la ronda (si hay canceladas)
+        if (rondaVM.peleasCanceladas > 0)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.grey.shade200,
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    rondaVM.resumenDetallado,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // Lista de peleas
         Expanded(
@@ -173,6 +263,7 @@ class PeleasScreen extends StatelessWidget {
                   state,
                   rondaVM.peleasVM[index],
                   index,
+                  rondaBloqueada: rondaBloqueada,
                 );
               },
             ),
@@ -186,8 +277,14 @@ class PeleasScreen extends StatelessWidget {
     BuildContext context,
     DerbyState state,
     PeleaVM peleaVM,
-    int index,
-  ) {
+    int index, {
+    bool rondaBloqueada = false,
+  }) {
+    // Card distinta para peleas canceladas
+    if (peleaVM.cancelada) {
+      return _buildPeleaCanceladaCard(context, peleaVM, index);
+    }
+
     return Card(
       elevation: peleaVM.completada ? 1 : 4,
       color: peleaVM.completada ? Colors.grey.shade100 : null,
@@ -219,7 +316,7 @@ class PeleasScreen extends StatelessWidget {
               ],
             ),
 
-            const Spacer(),
+            const SizedBox(height: 12),
 
             // Competidores
             Row(
@@ -249,7 +346,8 @@ class PeleasScreen extends StatelessWidget {
                           fontSize: 20,
                         ),
                       ),
-                      if (peleaVM.completada && peleaVM.duracionSegundos != null)
+                      if (peleaVM.completada &&
+                          peleaVM.duracionSegundos != null)
                         Text(
                           peleaVM.duracionFormateada,
                           style: const TextStyle(
@@ -276,35 +374,231 @@ class PeleasScreen extends StatelessWidget {
               ],
             ),
 
-            const Spacer(),
+            const SizedBox(height: 12),
 
             // Acciones
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (!peleaVM.completada)
+                if (rondaBloqueada)
+                  // P0-2: Indicador de bloqueo
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.lock, size: 16, color: Colors.orange.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Bloqueada',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (!peleaVM.completada) ...[
                   ElevatedButton.icon(
-                    onPressed: () => _iniciarPeleaEnVivo(context, state, peleaVM),
+                    onPressed: () =>
+                        _iniciarPeleaEnVivo(context, state, peleaVM),
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('Empezar pelea'),
                   ),
-                if (!peleaVM.completada) const SizedBox(width: 8),
-                if (!peleaVM.completada)
+                  const SizedBox(width: 8),
                   TextButton.icon(
-                    onPressed: () => _mostrarRegistroRapido(context, state, peleaVM),
+                    onPressed: () =>
+                        _mostrarRegistroRapido(context, state, peleaVM),
                     icon: const Icon(Icons.flash_on, size: 18),
                     label: const Text('Rápido'),
                   ),
-                if (peleaVM.completada)
+                ] else ...[
                   TextButton.icon(
-                    onPressed: () => _deshacerResultado(context, state, peleaVM),
+                    onPressed: () =>
+                        _deshacerResultado(context, state, peleaVM),
                     icon: const Icon(Icons.undo, size: 18),
                     label: const Text('Deshacer'),
                   ),
+                ],
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Card gris/apagada para pelea cancelada — muestra motivo explícitamente.
+  Widget _buildPeleaCanceladaCard(
+    BuildContext context,
+    PeleaVM peleaVM,
+    int index,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Colors.grey.shade200,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade400, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey.shade400,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Pelea ${index + 1}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade500,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cancel, size: 14, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'CANCELADA',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Competidores (apagados)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildLadoCanceladoCompetidor(
+                    anillo: peleaVM.anilloRojo,
+                    peso: peleaVM.pesoRojoFormateado,
+                    nombreParticipante: peleaVM.nombreParticipanteRojo,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'VS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _buildLadoCanceladoCompetidor(
+                    anillo: peleaVM.anilloVerde,
+                    peso: peleaVM.pesoVerdeFormateado,
+                    nombreParticipante: peleaVM.nombreParticipanteVerde,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Motivo de cancelación
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      peleaVM.motivoCancelacion.isNotEmpty
+                          ? peleaVM.motivoCancelacion
+                          : 'Pelea cancelada',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Lado competidor para pelea cancelada (apagado, sin colores)
+  Widget _buildLadoCanceladoCompetidor({
+    required String anillo,
+    required String peso,
+    required String nombreParticipante,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.pets, color: Colors.grey.shade500, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            anillo,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          Text(
+            peso,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          ),
+          Text(
+            nombreParticipante,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -419,11 +713,19 @@ class PeleasScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.sports_martial_arts, color: Color(0xFF8B0000)),
+                leading: const Icon(
+                  Icons.sports_martial_arts,
+                  color: Color(0xFF8B0000),
+                ),
                 title: Text('Ganó Rojo (${peleaVM.anilloRojo})'),
                 onTap: () {
                   Navigator.pop(context);
-                  _registrarGanador(context, state, peleaVM, peleaVM.galloRojoId);
+                  _registrarGanador(
+                    context,
+                    state,
+                    peleaVM,
+                    peleaVM.galloRojoId,
+                  );
                 },
               ),
               ListTile(
@@ -435,11 +737,19 @@ class PeleasScreen extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.sports_martial_arts, color: Color(0xFF2E7D32)),
+                leading: const Icon(
+                  Icons.sports_martial_arts,
+                  color: Color(0xFF2E7D32),
+                ),
                 title: Text('Ganó Verde (${peleaVM.anilloVerde})'),
                 onTap: () {
                   Navigator.pop(context);
-                  _registrarGanador(context, state, peleaVM, peleaVM.galloVerdeId);
+                  _registrarGanador(
+                    context,
+                    state,
+                    peleaVM,
+                    peleaVM.galloVerdeId,
+                  );
                 },
               ),
             ],
@@ -449,61 +759,343 @@ class PeleasScreen extends StatelessWidget {
     );
   }
 
-  void _registrarGanador(
+  // P0-3: Registrar ganador con CONFIRMACIÓN obligatoria
+  Future<void> _registrarGanador(
     BuildContext context,
     DerbyState state,
     PeleaVM peleaVM,
     String ganadorId,
-  ) {
-    state.registrarResultado(
-      indexRonda: state.rondaSeleccionada,
-      peleaId: peleaVM.id,
-      ganadorId: ganadorId,
-    );
+  ) async {
+    final esRojo = ganadorId == peleaVM.galloRojoId;
+    final anilloGanador = esRojo ? peleaVM.anilloRojo : peleaVM.anilloVerde;
+    final nombreGanador = esRojo
+        ? peleaVM.nombreParticipanteRojo
+        : peleaVM.nombreParticipanteVerde;
+    final colorGanador = esRojo ? 'ROJO' : 'VERDE';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Ganador registrado'),
-        duration: Duration(seconds: 1),
+    // P0-3: Diálogo de confirmación obligatorio
+    final confirmar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar resultado'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Confirmar que GANÓ $colorGanador?',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  color: esRojo
+                      ? const Color(0xFF8B0000)
+                      : const Color(0xFF2E7D32),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Anillo: $anilloGanador',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text('Dueño: $nombreGanador'),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Ronda ${state.rondaSeleccionada + 1} · Pelea ${peleaVM.numero}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: esRojo
+                  ? const Color(0xFF8B0000)
+                  : const Color(0xFF2E7D32),
+            ),
+            child: Text('Confirmar $colorGanador'),
+          ),
+        ],
       ),
     );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await state.registrarResultado(
+        indexRonda: state.rondaSeleccionada,
+        peleaId: peleaVM.id,
+        ganadorId: ganadorId,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✓ Ganador registrado: $anilloGanador ($colorGanador)',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } on StateError catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
-  void _registrarEmpate(
+  // P0-3: Registrar empate con CONFIRMACIÓN obligatoria
+  Future<void> _registrarEmpate(
     BuildContext context,
     DerbyState state,
     PeleaVM peleaVM,
-  ) {
-    state.registrarResultado(
-      indexRonda: state.rondaSeleccionada,
-      peleaId: peleaVM.id,
-      empate: true,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Empate registrado'),
-        duration: Duration(seconds: 1),
+  ) async {
+    // P0-3: Diálogo de confirmación obligatorio
+    final confirmar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar resultado'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '¿Confirmar EMPATE?',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.handshake, color: Colors.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${peleaVM.anilloRojo} vs ${peleaVM.anilloVerde}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${peleaVM.nombreParticipanteRojo} vs ${peleaVM.nombreParticipanteVerde}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Ronda ${state.rondaSeleccionada + 1} · Pelea ${peleaVM.numero}',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Confirmar Empate'),
+          ),
+        ],
       ),
     );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await state.registrarResultado(
+        indexRonda: state.rondaSeleccionada,
+        peleaId: peleaVM.id,
+        empate: true,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Empate registrado'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } on StateError catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
-  void _deshacerResultado(
+  // P0-1: Deshacer resultado con manejo de errores
+  Future<void> _deshacerResultado(
     BuildContext context,
     DerbyState state,
     PeleaVM peleaVM,
-  ) {
-    state.deshacerResultado(
-      indexRonda: state.rondaSeleccionada,
-      peleaId: peleaVM.id,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Resultado deshecho'),
-        duration: Duration(seconds: 1),
+  ) async {
+    // Confirmación simple para deshacer
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deshacer resultado'),
+        content: Text(
+          '¿Deshacer el resultado de la pelea ${peleaVM.numero}?\n\n'
+          'Los puntos serán revertidos automáticamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Deshacer'),
+          ),
+        ],
       ),
     );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await state.deshacerResultado(
+        indexRonda: state.rondaSeleccionada,
+        peleaId: peleaVM.id,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Resultado deshecho y puntos revertidos'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } on StateError catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // P0-2: Desbloquear ronda con DOBLE confirmación
+  Future<void> _confirmarDesbloqueo(
+    BuildContext context,
+    DerbyState state,
+  ) async {
+    // Primera confirmación
+    final primera = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Desbloquear Ronda'),
+          ],
+        ),
+        content: const Text(
+          'La ronda está bloqueada porque todas las peleas fueron finalizadas.\n\n'
+          '¿Desea desbloquearla para hacer correcciones?\n\n'
+          'ADVERTENCIA: Esto permitirá modificar resultados ya registrados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+
+    if (primera != true || !context.mounted) return;
+
+    // Segunda confirmación (más estricta)
+    final segunda = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('¿Está seguro?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'CONFIRMAR DESBLOQUEO',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Al desbloquear la ronda:\n'
+              '• Podrá modificar resultados\n'
+              '• Los puntos pueden cambiar\n'
+              '• Esta acción quedará registrada\n\n'
+              '¿Confirma que desea desbloquear?',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No, mantener bloqueada'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sí, desbloquear'),
+          ),
+        ],
+      ),
+    );
+
+    if (segunda != true || !context.mounted) return;
+
+    await state.desbloquearRonda(state.rondaSeleccionada);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Ronda desbloqueada - Puede modificar resultados'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _exportarRondaPdf(BuildContext context, DerbyState state) async {
@@ -631,8 +1223,8 @@ class _PeleaEnVivoScreenState extends State<_PeleaEnVivoScreen> {
     final etiquetaResultado = empate
         ? 'Resultado final: Empate'
         : ganadorId == widget.peleaVM.galloRojoId
-            ? 'Resultado final: Ganó Rojo'
-            : 'Resultado final: Ganó Verde';
+        ? 'Resultado final: Ganó Rojo'
+        : 'Resultado final: Ganó Verde';
     _agregarEvento(etiquetaResultado);
 
     final notas = _notasController.text.trim();
@@ -656,10 +1248,7 @@ class _PeleaEnVivoScreenState extends State<_PeleaEnVivoScreen> {
   void _agregarEvento(String descripcion) {
     _historial.insert(
       0,
-      _EventoPeleaEnVivo(
-        tiempoSegundos: _segundos,
-        descripcion: descripcion,
-      ),
+      _EventoPeleaEnVivo(tiempoSegundos: _segundos, descripcion: descripcion),
     );
   }
 
@@ -719,7 +1308,10 @@ class _PeleaEnVivoScreenState extends State<_PeleaEnVivoScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       'VS',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -894,7 +1486,11 @@ class _CompetidorEnVivoCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             anillo,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
           const SizedBox(height: 4),
           Text(peso, style: Theme.of(context).textTheme.titleMedium),

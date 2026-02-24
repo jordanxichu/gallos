@@ -8,7 +8,7 @@ class ParticipanteDb {
   Id id = Isar.autoIncrement;
 
   /// ID único del engine
-  @Index(unique: true)
+  @Index()
   late String uid;
 
   late String nombre;
@@ -19,6 +19,9 @@ class ParticipanteDb {
   int peleasGanadas = 0;
   int peleasPerdidas = 0;
   int peleasEmpatadas = 0;
+
+  /// IDs de participantes compadres (no pueden enfrentarse nunca)
+  List<String> compadres = [];
 
   DateTime createdAt = DateTime.now();
 }

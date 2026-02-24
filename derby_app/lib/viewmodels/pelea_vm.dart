@@ -40,6 +40,15 @@ class PeleaVM {
   /// Indica si ya se completó la pelea
   bool get completada => estado == EstadoPelea.finalizada;
 
+  /// Indica si la pelea fue cancelada (por retiro/descalificación de un gallo)
+  bool get cancelada => estado == EstadoPelea.cancelada;
+
+  /// Motivo de cancelación extraído de las notas
+  String get motivoCancelacion {
+    if (!cancelada || notas == null) return '';
+    return notas!;
+  }
+
   /// Indica si ganó el lado rojo
   bool get ganoRojo => ganadorId == galloRojoId;
 

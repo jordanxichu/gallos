@@ -1,0 +1,10 @@
+# Private keys - NEVER commit
+private_key.pem
+
+# Generated licenses
+license_*.txt
+
+# Dart
+.dart_tool/
+.packages
+pubspec.lock

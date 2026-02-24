@@ -101,7 +101,9 @@ class ParticipantesScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: participantesVM.isEmpty
+                      ? null
+                      : () => _exportarParticipantes(context, state),
                   icon: const Icon(Icons.download),
                   label: const Text('Exportar'),
                 ),
@@ -123,6 +125,7 @@ class ParticipantesScreen extends StatelessWidget {
                       DataColumn(label: Text('Teléfono')),
                       DataColumn(label: Text('Gallos')),
                       DataColumn(label: Text('Puntos')),
+                      DataColumn(label: Text('Compadres')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     rows: participantesVM.asMap().entries.map((entry) {
@@ -131,15 +134,88 @@ class ParticipantesScreen extends StatelessWidget {
                       return DataRow(
                         cells: [
                           DataCell(Text('${index + 1}')),
-                          DataCell(Text(vm.nombre)),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(vm.nombre),
+                                if (vm.estadoBadge.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: vm.todosDescalificados
+                                          ? Colors.red
+                                          : Colors.orange,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      vm.estadoBadge,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                           DataCell(Text(vm.equipo ?? '-')),
                           DataCell(Text(vm.telefono ?? '-')),
                           DataCell(Text('${vm.totalGallos}')),
                           DataCell(Text('${vm.puntosTotales}')),
                           DataCell(
+                            vm.compadres.isEmpty
+                                ? const Text(
+                                    '-',
+                                    style: TextStyle(color: Colors.grey),
+                                  )
+                                : Tooltip(
+                                    message: vm.compadres
+                                        .map(
+                                          (id) =>
+                                              participantesVM
+                                                  .where((p) => p.id == id)
+                                                  .map((p) => p.nombre)
+                                                  .firstOrNull ??
+                                              id,
+                                        )
+                                        .join(', '),
+                                    child: Chip(
+                                      label: Text('${vm.compadres.length}'),
+                                      avatar: const Icon(
+                                        Icons.handshake,
+                                        size: 14,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      backgroundColor: Colors.orange.withAlpha(
+                                        40,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                IconButton(
+                                  icon: const Icon(Icons.handshake, size: 20),
+                                  tooltip: 'Gestionar compadres',
+                                  color: vm.compadres.isEmpty
+                                      ? null
+                                      : Colors.orange,
+                                  onPressed: () => _gestionarCompadres(
+                                    context,
+                                    state,
+                                    vm.participante,
+                                    participantesVM,
+                                  ),
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 20),
                                   tooltip: 'Editar',
@@ -253,6 +329,8 @@ class ParticipantesScreen extends StatelessWidget {
                     telefono: telefonoController.text.trim().isEmpty
                         ? null
                         : telefonoController.text.trim(),
+                    // Preservar compadres existentes al editar nombre/equipo/teléfono
+                    compadres: List<String>.from(participante.compadres),
                   ),
                 );
               } else {
@@ -305,6 +383,167 @@ class ParticipantesScreen extends StatelessWidget {
     );
   }
 
+  void _gestionarCompadres(
+    BuildContext context,
+    DerbyState state,
+    Participante participante,
+    List<ParticipanteVM> todos,
+  ) {
+    // Lista mutable de IDs seleccionados (copia de los actuales)
+    final seleccionados = Set<String>.from(participante.compadres);
+
+    // Candidatos: todos excepto el propio participante
+    final candidatos = todos.where((vm) => vm.id != participante.id).toList();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.handshake, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Compadres de ${participante.nombre}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withAlpha(80)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Los compadres no podrán enfrentarse en ninguna ronda del derby. '
+                          'La relación se asigna automáticamente en ambas direcciones.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (candidatos.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'No hay otros participantes registrados.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: candidatos.map((vm) {
+                          final isSelected = seleccionados.contains(vm.id);
+                          return CheckboxListTile(
+                            value: isSelected,
+                            title: Text(vm.nombre),
+                            subtitle: vm.equipo != null && vm.equipo!.isNotEmpty
+                                ? Text(
+                                    vm.equipo!,
+                                    style: const TextStyle(fontSize: 12),
+                                  )
+                                : null,
+                            secondary: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: isSelected
+                                  ? Colors.orange.withAlpha(80)
+                                  : Colors.grey.withAlpha(50),
+                              child: Text(
+                                vm.nombre.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            activeColor: Colors.orange,
+                            dense: true,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                if (val == true) {
+                                  seleccionados.add(vm.id);
+                                } else {
+                                  seleccionados.remove(vm.id);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  '${seleccionados.length} compadre(s) seleccionado(s)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: seleccionados.isEmpty
+                        ? Colors.grey
+                        : Colors.orange.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save, size: 18),
+              label: const Text('Guardar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await state.actualizarCompadres(
+                  participante.id,
+                  seleccionados.toList(),
+                );
+                if (context.mounted) {
+                  final n = seleccionados.length;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        n == 0
+                            ? 'Compadres eliminados de ${participante.nombre}'
+                            : '$n compadre(s) asignado(s) a ${participante.nombre}',
+                      ),
+                      backgroundColor: n == 0 ? Colors.grey : Colors.orange,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmarEliminar(
     BuildContext context,
     DerbyState state,
@@ -337,5 +576,26 @@ class ParticipantesScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _exportarParticipantes(
+    BuildContext context,
+    DerbyState state,
+  ) async {
+    try {
+      final path = await state.exportarParticipantesCsv();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('CSV exportado: $path')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al exportar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

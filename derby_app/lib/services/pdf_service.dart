@@ -92,6 +92,27 @@ class PdfService {
       );
     }
 
+    // Página de gallos retirados / descalificados (si hay)
+    final gallosFuera = state.gallosVM.where((g) => g.fueraDelTorneo).toList();
+    if (gallosFuera.isNotEmpty) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.letter,
+          margin: const pw.EdgeInsets.all(32),
+          build: (context) => _buildPaginaRetiros(gallosFuera, nombreDerby),
+        ),
+      );
+    }
+
+    // Página de nota legal / disclaimer
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.letter,
+        margin: const pw.EdgeInsets.all(32),
+        build: (context) => _buildPaginaNotaLegal(nombreDerby),
+      ),
+    );
+
     return await _guardarPdf(pdf, 'derby_completo.pdf');
   }
 
@@ -109,11 +130,8 @@ class PdfService {
       pw.Page(
         pageFormat: PdfPageFormat.letter,
         margin: const pw.EdgeInsets.all(24),
-        build: (context) => _buildHojaFisica(
-          rondaVM,
-          mostrarResultados,
-          state.derbyNombre,
-        ),
+        build: (context) =>
+            _buildHojaFisica(rondaVM, mostrarResultados, state.derbyNombre),
       ),
     );
 
@@ -143,9 +161,7 @@ class PdfService {
         pw.SizedBox(height: 8),
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(width: 2),
-          ),
+          decoration: pw.BoxDecoration(border: pw.Border.all(width: 2)),
           child: pw.Text(
             'RONDA ${rondaVM.numero}',
             style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
@@ -159,7 +175,10 @@ class PdfService {
               '${rondaVM.fechaGeneracion?.day ?? '-'}/${rondaVM.fechaGeneracion?.month ?? '-'}/${rondaVM.fechaGeneracion?.year ?? '-'}',
               style: const pw.TextStyle(fontSize: 10),
             ),
-            pw.Text('${rondaVM.totalPeleas} Peleas', style: const pw.TextStyle(fontSize: 10)),
+            pw.Text(
+              '${rondaVM.totalPeleas} Peleas',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
             pw.Text(
               mostrarResultados
                   ? '${rondaVM.peleasFinalizadas} Finalizadas'
@@ -222,11 +241,16 @@ class PdfService {
               children: [
                 pw.Text(
                   'Gallos sin cotejo (${rondaVM.sinCotejoVM.length})',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  rondaVM.sinCotejoVM.map((g) => '${g.anillo} (${g.pesoFormateado})').join(', '),
+                  rondaVM.sinCotejoVM
+                      .map((g) => '${g.anillo} (${g.pesoFormateado})')
+                      .join(', '),
                   style: const pw.TextStyle(fontSize: 9),
                 ),
               ],
@@ -243,28 +267,41 @@ class PdfService {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Firma del Juez:', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey)),
+                pw.Text(
+                  'Firma del Juez:',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                ),
                 pw.SizedBox(height: 4),
                 pw.Container(width: 120, height: 1, color: PdfColors.black),
               ],
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
               decoration: pw.BoxDecoration(
                 color: mostrarResultados
-                    ? (rondaVM.todasFinalizadas ? PdfColors.green : PdfColors.blue)
+                    ? (rondaVM.todasFinalizadas
+                          ? PdfColors.green
+                          : PdfColors.blue)
                     : PdfColors.grey,
                 borderRadius: pw.BorderRadius.circular(4),
               ),
               child: pw.Text(
-                mostrarResultados ? rondaVM.estadoLabel.toUpperCase() : 'PENDIENTE',
+                mostrarResultados
+                    ? rondaVM.estadoLabel.toUpperCase()
+                    : 'PENDIENTE',
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.white),
               ),
             ),
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
-                pw.Text('Firma Validador:', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey)),
+                pw.Text(
+                  'Firma Validador:',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey),
+                ),
                 pw.SizedBox(height: 4),
                 pw.Container(width: 120, height: 1, color: PdfColors.black),
               ],
@@ -291,8 +328,73 @@ class PdfService {
   }
 
   static pw.TableRow _buildPdfFilaPelea(PeleaVM pelea, bool mostrarResultados) {
-    final ganoRojo = mostrarResultados && pelea.tieneResultado && pelea.ganoRojo;
-    final ganoVerde = mostrarResultados && pelea.tieneResultado && pelea.ganoVerde;
+    // Pelea cancelada — fila gris con "SIN COTEJO"
+    if (pelea.cancelada) {
+      return pw.TableRow(
+        decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+        children: [
+          _buildPdfCell('${pelea.numero}', bold: true),
+          _buildPdfCell(pelea.nombreParticipanteRojo, color: PdfColors.grey600),
+          _buildPdfCell(pelea.anilloRojo),
+          _buildPdfCell(pelea.pesoRojoFormateado, mono: true),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(4),
+            child: pw.Center(
+              child: pw.Container(
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 2,
+                ),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey500,
+                  borderRadius: pw.BorderRadius.circular(2),
+                ),
+                child: pw.Text(
+                  'VS',
+                  style: const pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 6,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _buildPdfCell(pelea.pesoVerdeFormateado, mono: true),
+          _buildPdfCell(pelea.anilloVerde),
+          _buildPdfCell(
+            pelea.nombreParticipanteVerde,
+            color: PdfColors.grey600,
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(3),
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 3,
+              ),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey400,
+                borderRadius: pw.BorderRadius.circular(3),
+              ),
+              child: pw.Text(
+                'SIN COTEJO',
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(
+                  fontSize: 6,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final ganoRojo =
+        mostrarResultados && pelea.tieneResultado && pelea.ganoRojo;
+    final ganoVerde =
+        mostrarResultados && pelea.tieneResultado && pelea.ganoVerde;
     final esEmpate = mostrarResultados && pelea.tieneResultado && pelea.empate;
 
     return pw.TableRow(
@@ -310,7 +412,10 @@ class PdfService {
           padding: const pw.EdgeInsets.all(4),
           child: pw.Center(
             child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 2,
+              ),
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey800,
                 borderRadius: pw.BorderRadius.circular(2),
@@ -330,7 +435,13 @@ class PdfService {
           bold: ganoVerde,
           bgColor: ganoVerde ? PdfColors.green50 : null,
         ),
-        _buildPdfResultadoCell(pelea, mostrarResultados, ganoRojo, ganoVerde, esEmpate),
+        _buildPdfResultadoCell(
+          pelea,
+          mostrarResultados,
+          ganoRojo,
+          ganoVerde,
+          esEmpate,
+        ),
       ],
     );
   }
@@ -421,7 +532,10 @@ class PdfService {
               child: pw.Text(
                 _formatearDuracionPelea(pelea.duracionSegundos!),
                 textAlign: pw.TextAlign.center,
-                style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700),
+                style: const pw.TextStyle(
+                  fontSize: 6,
+                  color: PdfColors.grey700,
+                ),
               ),
             ),
         ],
@@ -438,21 +552,21 @@ class PdfService {
   /// Guarda el PDF en Desktop y retorna la ruta.
   static Future<String> _guardarPdf(pw.Document pdf, String filename) async {
     final bytes = await pdf.save();
-    
+
     // Obtener directorio de escritorio o documentos
     final dir = await getApplicationDocumentsDirectory();
-    
+
     // Crear nombre único con timestamp
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final uniqueFilename = '${filename.replaceAll('.pdf', '')}_$timestamp.pdf';
     final file = File('${dir.path}/$uniqueFilename');
-    
+
     await file.writeAsBytes(bytes);
-    
+
     // Intentar abrir el archivo con la app predeterminada del sistema
     // (si falla, igual retornamos la ruta para no romper la exportación)
     await _abrirArchivo(file.path);
-    
+
     return file.path;
   }
 
@@ -464,11 +578,12 @@ class PdfService {
       }
 
       if (Platform.isWindows) {
-        await Process.run(
-          'cmd',
-          ['/c', 'start', '', filePath],
-          runInShell: true,
-        );
+        await Process.run('cmd', [
+          '/c',
+          'start',
+          '',
+          filePath,
+        ], runInShell: true);
         return;
       }
 
@@ -610,8 +725,8 @@ class PdfService {
               style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
             ),
             pw.Text(
-              '${rondaVM.peleasFinalizadas}/${rondaVM.totalPeleas} peleas',
-              style: const pw.TextStyle(fontSize: 12),
+              rondaVM.resumenDetallado,
+              style: const pw.TextStyle(fontSize: 10),
             ),
           ],
         ),
@@ -641,8 +756,43 @@ class PdfService {
                 _cellHeader('Resultado'),
               ],
             ),
-            // Peleas
+            // Peleas (incluye canceladas con estilo distinto)
             ...rondaVM.peleasVM.map((pelea) {
+              if (pelea.cancelada) {
+                return pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    _cell('${pelea.numero}'),
+                    _cell(pelea.anilloRojo, align: pw.TextAlign.left),
+                    _cell(pelea.pesoRojoFormateado),
+                    _cell('vs'),
+                    _cell(pelea.anilloVerde, align: pw.TextAlign.left),
+                    _cell(pelea.pesoVerdeFormateado),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.all(3),
+                      child: pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 3,
+                        ),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColors.grey400,
+                          borderRadius: pw.BorderRadius.circular(3),
+                        ),
+                        child: pw.Text(
+                          'SIN COTEJO',
+                          textAlign: pw.TextAlign.center,
+                          style: pw.TextStyle(
+                            fontSize: 7,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
               return pw.TableRow(
                 children: [
                   _cell('${pelea.numero}'),
@@ -670,6 +820,201 @@ class PdfService {
             style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
           ),
         ],
+        // Nota de peleas canceladas en esta ronda
+        if (rondaVM.peleasCanceladas > 0) ...[
+          pw.SizedBox(height: 8),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              border: pw.Border.all(color: PdfColors.grey300),
+            ),
+            child: pw.Text(
+              '${rondaVM.peleasCanceladas} pelea${rondaVM.peleasCanceladas > 1 ? 's' : ''} cancelada${rondaVM.peleasCanceladas > 1 ? 's' : ''} por retiro/descalificación previo.',
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Página de gallos retirados/descalificados/muertos
+  static pw.Widget _buildPaginaRetiros(
+    List<GalloVM> gallosFuera,
+    String titulo,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Gallos retirados durante el evento',
+          style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text(
+          '${gallosFuera.length} gallo${gallosFuera.length > 1 ? 's' : ''} fuera del torneo',
+          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+        ),
+        pw.SizedBox(height: 16),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400),
+          columnWidths: {
+            0: const pw.FixedColumnWidth(30),
+            1: const pw.FlexColumnWidth(1.5),
+            2: const pw.FlexColumnWidth(2),
+            3: const pw.FixedColumnWidth(55),
+            4: const pw.FixedColumnWidth(60),
+            5: const pw.FlexColumnWidth(2.5),
+          },
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              children: [
+                _cellHeader('#'),
+                _cellHeader('Anillo'),
+                _cellHeader('Participante'),
+                _cellHeader('Peso'),
+                _cellHeader('Estado'),
+                _cellHeader('Detalle'),
+              ],
+            ),
+            ...gallosFuera.asMap().entries.map((entry) {
+              final i = entry.key;
+              final g = entry.value;
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: g.estaMuerto
+                      ? PdfColors.brown50
+                      : (g.estaDescalificado
+                            ? PdfColors.red50
+                            : PdfColors.orange50),
+                ),
+                children: [
+                  _cell('${i + 1}'),
+                  _cell(g.anillo, align: pw.TextAlign.left),
+                  _cell(g.nombreParticipante, align: pw.TextAlign.left),
+                  _cell(g.pesoFormateado),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(3),
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: pw.BoxDecoration(
+                        color: g.estaMuerto
+                            ? PdfColors.brown
+                            : (g.estaDescalificado
+                                  ? PdfColors.red
+                                  : PdfColors.orange),
+                        borderRadius: pw.BorderRadius.circular(3),
+                      ),
+                      child: pw.Text(
+                        g.estaMuerto
+                            ? 'MUERTO'
+                            : (g.estaDescalificado ? 'DESCALIF.' : 'RETIRADO'),
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(
+                          fontSize: 7,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _cell(g.estadoDetalleVisible, align: pw.TextAlign.left),
+                ],
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Página de nota legal / disclaimer
+  static pw.Widget _buildPaginaNotaLegal(String titulo) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Nota Legal',
+          style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 16),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(16),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey400),
+            borderRadius: pw.BorderRadius.circular(4),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Las rondas de este torneo fueron generadas previamente por el '
+                'sistema Derby Manager mediante un algoritmo de optimización que '
+                'respeta las restricciones de peso y participante, buscando minimizar '
+                'las diferencias entre competidores.',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'El orden de peleas y la asignación de cancha (Rojo/Verde) se '
+                'determinaron al momento del sorteo y NO fueron modificados durante '
+                'la evolución del torneo.',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Los retiros, descalificaciones y muertes registrados en este documento '
+                'fueron ingresados por el operador del sistema en tiempo real durante el '
+                'desarrollo del evento.',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                'Documento generado: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} '
+                '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+                style: const pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 32),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(height: 40),
+                pw.Container(width: 160, height: 1, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Firma del Juez Principal',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(height: 40),
+                pw.Container(width: 160, height: 1, color: PdfColors.black),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Firma del Organizador',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
     );
   }

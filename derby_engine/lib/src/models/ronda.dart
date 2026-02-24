@@ -39,12 +39,23 @@ class Ronda {
   /// Número total de peleas en la ronda.
   int get totalPeleas => peleas.length;
 
-  /// Número de peleas finalizadas.
+  /// Número de peleas finalizadas (con resultado).
   int get peleasFinalizadas =>
       peleas.where((p) => p.estado == EstadoPelea.finalizada).length;
 
-  /// Verifica si todas las peleas han sido finalizadas.
-  bool get todasFinalizadas => peleasFinalizadas == totalPeleas;
+  /// Número de peleas canceladas (por retiro/descalificación).
+  int get peleasCanceladas =>
+      peleas.where((p) => p.estado == EstadoPelea.cancelada).length;
+
+  /// Número de peleas terminadas (finalizadas + canceladas).
+  /// Usado para calcular progreso de ronda.
+  int get peleasTerminadas => peleasFinalizadas + peleasCanceladas;
+
+  /// Peleas que aún requieren resultado (pendientes o en curso).
+  int get peleasPendientes => totalPeleas - peleasTerminadas;
+
+  /// Verifica si todas las peleas han sido terminadas (finalizadas o canceladas).
+  bool get todasFinalizadas => peleasTerminadas == totalPeleas;
 
   /// Obtiene la pelea de un gallo específico en esta ronda.
   Pelea? obtenerPeleaDeGallo(String galloId) {

@@ -5,6 +5,7 @@
 library;
 
 export 'gallo_vm.dart';
+export 'info_retiro.dart';
 export 'participante_vm.dart';
 export 'pelea_vm.dart';
 export 'ronda_vm.dart';

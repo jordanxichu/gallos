@@ -24,23 +24,20 @@ class DerbyRepository {
     await init();
     debugPrint('💾 Guardando participante: ${p.nombre} (${p.id})');
 
-    // Buscar si ya existe
-    final existing = await _isar.participanteDbs
-        .filter()
-        .uidEqualTo(p.id)
-        .findFirst();
+    final db = ParticipanteDb()
+      ..uid = p.id
+      ..nombre = p.nombre
+      ..equipo = p.equipo
+      ..telefono = p.telefono
+      ..puntosTotales = p.puntosTotales
+      ..peleasGanadas = p.peleasGanadas
+      ..peleasPerdidas = p.peleasPerdidas
+      ..peleasEmpatadas = p.peleasEmpatadas
+      ..compadres = List<String>.from(p.compadres);
 
-    final db = existing ?? ParticipanteDb();
-    db.uid = p.id;
-    db.nombre = p.nombre;
-    db.equipo = p.equipo;
-    db.telefono = p.telefono;
-    db.puntosTotales = p.puntosTotales;
-    db.peleasGanadas = p.peleasGanadas;
-    db.peleasPerdidas = p.peleasPerdidas;
-    db.peleasEmpatadas = p.peleasEmpatadas;
-
+    // Delete + put atómico para evitar colisión de índice único
     await _isar.writeTxn(() async {
+      await _isar.participanteDbs.filter().uidEqualTo(p.id).deleteAll();
       await _isar.participanteDbs.put(db);
     });
     debugPrint('✅ Participante guardado');
@@ -63,6 +60,7 @@ class DerbyRepository {
             peleasGanadas: db.peleasGanadas,
             peleasPerdidas: db.peleasPerdidas,
             peleasEmpatadas: db.peleasEmpatadas,
+            compadres: List<String>.from(db.compadres),
           ),
         )
         .toList();
@@ -84,16 +82,16 @@ class DerbyRepository {
     await init();
     debugPrint('💾 Guardando gallo: ${g.anillo} (${g.id})');
 
-    final existing = await _isar.galloDbs.filter().uidEqualTo(g.id).findFirst();
+    final db = GalloDb()
+      ..uid = g.id
+      ..participanteId = g.participanteId
+      ..peso = g.peso
+      ..anillo = g.anillo
+      ..estado = g.estado.name;
 
-    final db = existing ?? GalloDb();
-    db.uid = g.id;
-    db.participanteId = g.participanteId;
-    db.peso = g.peso;
-    db.anillo = g.anillo;
-    db.estado = g.estado.name;
-
+    // Delete + put atómico para evitar colisión de índice único
     await _isar.writeTxn(() async {
+      await _isar.galloDbs.filter().uidEqualTo(g.id).deleteAll();
       await _isar.galloDbs.put(db);
     });
     debugPrint('✅ Gallo guardado');
@@ -274,6 +272,25 @@ class DerbyRepository {
 
       await _isar.writeTxn(() async {
         await _isar.peleaDbs.put(existing);
+      });
+    }
+  }
+
+  /// Actualiza una ronda (ej: estado bloqueada).
+  Future<void> actualizarRonda(Ronda ronda) async {
+    await init();
+
+    final existing = await _isar.rondaDbs
+        .filter()
+        .uidEqualTo(ronda.id)
+        .findFirst();
+
+    if (existing != null) {
+      existing.estado = ronda.estado.name;
+      existing.bloqueada = ronda.bloqueada;
+
+      await _isar.writeTxn(() async {
+        await _isar.rondaDbs.put(existing);
       });
     }
   }

@@ -75,7 +75,9 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                       if (!state.permitePdf) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Exportar PDF requiere licencia Pro activa.'),
+                            content: Text(
+                              'Exportar PDF requiere licencia Pro activa.',
+                            ),
                             backgroundColor: Colors.orange,
                           ),
                         );
@@ -95,7 +97,10 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       }
@@ -111,7 +116,9 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                       if (!state.permitePdf) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Imprimir requiere licencia Pro activa.'),
+                            content: Text(
+                              'Imprimir requiere licencia Pro activa.',
+                            ),
                             backgroundColor: Colors.orange,
                           ),
                         );
@@ -131,7 +138,10 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       }
@@ -140,13 +150,50 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                 },
               ),
             ],
-            bottom: TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(icon: Icon(Icons.leaderboard), text: 'Posiciones'),
-                Tab(icon: Icon(Icons.pets), text: 'Gallos'),
-                Tab(icon: Icon(Icons.analytics), text: 'Estadísticas'),
-              ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(64),
+              child: Container(
+                color: Theme.of(context).colorScheme.surface,
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.85),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(
+                      height: 46,
+                      icon: Icon(Icons.leaderboard, size: 24),
+                      text: 'Posiciones',
+                    ),
+                    Tab(
+                      height: 46,
+                      icon: Icon(Icons.pets, size: 24),
+                      text: 'Gallos',
+                    ),
+                    Tab(
+                      height: 46,
+                      icon: Icon(Icons.analytics, size: 24),
+                      text: 'Estadísticas',
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           body: !state.sorteoRealizado
@@ -282,7 +329,37 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                             ),
                           ),
                           DataCell(Text(vm.nombre)),
-                          DataCell(Text(vm.equipo ?? '-')),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(vm.equipo ?? '-'),
+                                if (vm.estadoBadge.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: vm.todosDescalificados
+                                          ? Colors.red
+                                          : Colors.orange,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      vm.estadoBadge,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                           DataCell(Text('${vm.totalGallos}')),
                           DataCell(
                             Text(
@@ -396,6 +473,7 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                 DataColumn(label: Text('Anillo')),
                 DataColumn(label: Text('Peso')),
                 DataColumn(label: Text('Participante')),
+                DataColumn(label: Text('Estado')),
                 DataColumn(label: Text('Peleas')),
                 DataColumn(label: Text('V')),
                 DataColumn(label: Text('D')),
@@ -409,11 +487,49 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                     : 0;
 
                 return DataRow(
+                  color: vm.fueraDelTorneo
+                      ? WidgetStatePropertyAll(Colors.grey.shade100)
+                      : null,
                   cells: [
                     DataCell(Text('${index + 1}')),
                     DataCell(Text(vm.anillo)),
                     DataCell(Text(vm.pesoFormateado)),
                     DataCell(Text(vm.nombreParticipante)),
+                    DataCell(
+                      vm.fueraDelTorneo
+                          ? Tooltip(
+                              message: vm.tooltipEstado,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: vm.estaMuerto
+                                      ? Colors.brown
+                                      : (vm.estaDescalificado
+                                            ? Colors.red
+                                            : Colors.orange),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  vm.estadoBadge,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const Text(
+                              'Activo',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                    ),
                     DataCell(Text('${vm.totalPeleas}')),
                     DataCell(
                       Text(
@@ -577,7 +693,7 @@ class _ResultadosScreenState extends State<ResultadosScreen>
                                   ),
                                   title: Text('Ronda ${index + 1}'),
                                   trailing: Text(
-                                    '${rondaVM.peleasFinalizadas}/${rondaVM.totalPeleas}',
+                                    '${rondaVM.peleasTerminadas}/${rondaVM.totalPeleas}',
                                     style: TextStyle(
                                       color: rondaVM.todasFinalizadas
                                           ? Colors.green
@@ -649,13 +765,28 @@ class _ResultadosScreenState extends State<ResultadosScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, size: 28, color: Colors.white),
+            ),
+            const SizedBox(height: 10),
             Text(
               value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            Text(label, style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),

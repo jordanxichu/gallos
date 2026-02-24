@@ -167,6 +167,94 @@ class SorteoScreen extends StatelessWidget {
             ),
           ),
 
+          // Restricciones activas (compadres)
+          Builder(
+            builder: (ctx) {
+              // Construir pares únicos de compadres
+              final pares = <Map<String, String>>[];
+              final vistos = <String>{};
+              for (final p in state.participantes) {
+                for (final compId in p.compadres) {
+                  final clave = [p.id, compId]..sort();
+                  final claveStr = clave.join('_');
+                  if (vistos.contains(claveStr)) continue;
+                  vistos.add(claveStr);
+                  final compNombre =
+                      state.participantes
+                          .where((x) => x.id == compId)
+                          .map((x) => x.nombre)
+                          .firstOrNull ??
+                      compId;
+                  pares.add({'a': p.nombre, 'b': compNombre});
+                }
+              }
+              if (pares.isEmpty) return const SizedBox.shrink();
+              return Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.handshake,
+                                color: Colors.orange.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Restricciones activas — Compadres (${pares.length} par${pares.length > 1 ? 'es' : ''})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Estos participantes nunca serán emparejados en ninguna ronda:',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: pares
+                                .map(
+                                  (par) => Chip(
+                                    avatar: const Icon(
+                                      Icons.block,
+                                      size: 14,
+                                      color: Colors.orange,
+                                    ),
+                                    label: Text(
+                                      '${par['a']}  ✕  ${par['b']}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    backgroundColor: Colors.orange.withAlpha(
+                                      25,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.orange.withAlpha(80),
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+
           const Spacer(),
 
           // Botón de iniciar
@@ -174,7 +262,9 @@ class SorteoScreen extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: puedeIniciar ? () => state.generarPreviewSorteo() : null,
+              onPressed: puedeIniciar
+                  ? () => state.generarPreviewSorteo()
+                  : null,
               icon: const Icon(Icons.visibility, size: 28),
               label: const Text(
                 'GENERAR PREVIEW',
@@ -277,14 +367,18 @@ class SorteoScreen extends StatelessWidget {
               children: [
                 // Resumen
                 Card(
-                  color: enPreview ? Colors.amber.shade50 : Colors.green.shade50,
+                  color: enPreview
+                      ? Colors.amber.shade50
+                      : Colors.green.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         Icon(
                           enPreview ? Icons.visibility : Icons.check_circle,
-                          color: enPreview ? Colors.amber.shade700 : Colors.green,
+                          color: enPreview
+                              ? Colors.amber.shade700
+                              : Colors.green,
                           size: 32,
                         ),
                         const SizedBox(width: 16),
@@ -292,7 +386,9 @@ class SorteoScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              enPreview ? 'Preview de Sorteo' : 'Sorteo Completado',
+                              enPreview
+                                  ? 'Preview de Sorteo'
+                                  : 'Sorteo Completado',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
@@ -405,12 +501,31 @@ class SorteoScreen extends StatelessWidget {
                         peleaVM.anilloRojo,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text(
-                        peleaVM.nombreParticipanteRojo,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if ((peleaVM.galloRojo?.participante?.compadres ?? [])
+                              .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Tooltip(
+                                message:
+                                    'Tiene compadres (restricciones activas)',
+                                child: Icon(
+                                  Icons.handshake,
+                                  size: 11,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            peleaVM.nombreParticipanteRojo,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -439,12 +554,32 @@ class SorteoScreen extends StatelessWidget {
                         peleaVM.anilloVerde,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text(
-                        peleaVM.nombreParticipanteVerde,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if ((peleaVM.galloVerde?.participante?.compadres ??
+                                  [])
+                              .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Tooltip(
+                                message:
+                                    'Tiene compadres (restricciones activas)',
+                                child: Icon(
+                                  Icons.handshake,
+                                  size: 11,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            peleaVM.nombreParticipanteVerde,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -560,7 +695,11 @@ class SorteoScreen extends StatelessWidget {
                 state.limpiarSorteo();
               }
             },
-            child: Text(state.tienePreview && !state.sorteoRealizado ? 'Descartar' : 'Nuevo Sorteo'),
+            child: Text(
+              state.tienePreview && !state.sorteoRealizado
+                  ? 'Descartar'
+                  : 'Nuevo Sorteo',
+            ),
           ),
         ],
       ),
@@ -598,7 +737,10 @@ class SorteoScreen extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -623,7 +765,10 @@ class SorteoScreen extends StatelessWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }

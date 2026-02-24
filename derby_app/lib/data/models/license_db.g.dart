@@ -93,7 +93,7 @@ const LicenseDbSchema = CollectionSchema(
     r'licenseId': IndexSchema(
       id: 2024518247436909527,
       name: r'licenseId',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -246,61 +246,6 @@ List<IsarLinkBase<dynamic>> _licenseDbGetLinks(LicenseDb object) {
 
 void _licenseDbAttach(IsarCollection<dynamic> col, Id id, LicenseDb object) {
   object.id = id;
-}
-
-extension LicenseDbByIndex on IsarCollection<LicenseDb> {
-  Future<LicenseDb?> getByLicenseId(String licenseId) {
-    return getByIndex(r'licenseId', [licenseId]);
-  }
-
-  LicenseDb? getByLicenseIdSync(String licenseId) {
-    return getByIndexSync(r'licenseId', [licenseId]);
-  }
-
-  Future<bool> deleteByLicenseId(String licenseId) {
-    return deleteByIndex(r'licenseId', [licenseId]);
-  }
-
-  bool deleteByLicenseIdSync(String licenseId) {
-    return deleteByIndexSync(r'licenseId', [licenseId]);
-  }
-
-  Future<List<LicenseDb?>> getAllByLicenseId(List<String> licenseIdValues) {
-    final values = licenseIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'licenseId', values);
-  }
-
-  List<LicenseDb?> getAllByLicenseIdSync(List<String> licenseIdValues) {
-    final values = licenseIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'licenseId', values);
-  }
-
-  Future<int> deleteAllByLicenseId(List<String> licenseIdValues) {
-    final values = licenseIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'licenseId', values);
-  }
-
-  int deleteAllByLicenseIdSync(List<String> licenseIdValues) {
-    final values = licenseIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'licenseId', values);
-  }
-
-  Future<Id> putByLicenseId(LicenseDb object) {
-    return putByIndex(r'licenseId', object);
-  }
-
-  Id putByLicenseIdSync(LicenseDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'licenseId', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByLicenseId(List<LicenseDb> objects) {
-    return putAllByIndex(r'licenseId', objects);
-  }
-
-  List<Id> putAllByLicenseIdSync(List<LicenseDb> objects,
-      {bool saveLinks = true}) {
-    return putAllByIndexSync(r'licenseId', objects, saveLinks: saveLinks);
-  }
 }
 
 extension LicenseDbQueryWhereSort

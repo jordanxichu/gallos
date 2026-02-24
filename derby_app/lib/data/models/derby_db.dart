@@ -8,7 +8,7 @@ class DerbyDb {
   Id id = Isar.autoIncrement;
 
   /// ID único del derby
-  @Index(unique: true)
+  @Index()
   late String uid;
 
   late String nombre;
@@ -34,7 +34,7 @@ class DerbyDb {
 class RondaDb {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true)
+  @Index()
   late String uid;
 
   @Index()
@@ -54,7 +54,7 @@ class RondaDb {
 class PeleaDb {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true)
+  @Index()
   late String uid;
 
   @Index()

@@ -25,7 +25,7 @@ class DashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: Padding(
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,18 +48,14 @@ class DashboardScreen extends StatelessWidget {
                             children: [
                               Text(
                                 state.derbyNombre,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Derby Manager - Sistema de Gestión',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(color: Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -121,6 +117,61 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // Indicadores de retiros (si hay gallos fuera del torneo)
+                if (state.gallosFueraTorneo > 0) ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    color: Colors.orange.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange.shade700,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Gallos fuera del torneo:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (state.gallosMuertos > 0)
+                            _RetiroChip(
+                              icon: '☠️',
+                              label:
+                                  '${state.gallosMuertos} muerte${state.gallosMuertos > 1 ? 's' : ''}',
+                              color: Colors.brown,
+                            ),
+                          if (state.gallosRetirados - state.gallosMuertos >
+                              0) ...[
+                            if (state.gallosMuertos > 0)
+                              const SizedBox(width: 8),
+                            _RetiroChip(
+                              icon: '⛔',
+                              label:
+                                  '${state.gallosRetirados - state.gallosMuertos} retirado${(state.gallosRetirados - state.gallosMuertos) > 1 ? 's' : ''}',
+                              color: Colors.orange,
+                            ),
+                          ],
+                          if (state.gallosDescalificados > 0) ...[
+                            const SizedBox(width: 8),
+                            _RetiroChip(
+                              icon: '🚫',
+                              label: '${state.gallosDescalificados} descalif.',
+                              color: Colors.red,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 24),
 
@@ -240,7 +291,7 @@ class DashboardScreen extends StatelessWidget {
   void _mostrarDialogoNuevoDerbi(BuildContext context, DerbyState state) {
     final nombreController = TextEditingController();
     final lugarController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -278,14 +329,14 @@ class DashboardScreen extends StatelessWidget {
             onPressed: () {
               final nombre = nombreController.text.trim();
               final lugar = lugarController.text.trim();
-              final nombreCompleto = lugar.isNotEmpty 
-                  ? '$nombre - $lugar' 
+              final nombreCompleto = lugar.isNotEmpty
+                  ? '$nombre - $lugar'
                   : (nombre.isNotEmpty ? nombre : 'Derby Actual');
               state.resetear(nombre: nombreCompleto);
               Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Derbi "$nombreCompleto" creado')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Derbi "$nombreCompleto" creado')),
+              );
             },
             child: const Text('Crear'),
           ),
@@ -294,9 +345,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _cargarDatosPrueba(BuildContext context, DerbyState state) async {
+  Future<void> _cargarDatosPrueba(
+    BuildContext context,
+    DerbyState state,
+  ) async {
     final hayDatos = state.totalParticipantes > 0;
-    
+
     // Mostrar diálogo de confirmación
     final confirmar = await showDialog<bool>(
       context: context,
@@ -305,9 +359,9 @@ class DashboardScreen extends StatelessWidget {
         content: Text(
           hayDatos
               ? '⚠️ Ya existen ${state.totalParticipantes} participantes y ${state.totalGallos} gallos.\n\n'
-                'Se eliminarán los datos actuales y se crearán 8 participantes con 32 gallos nuevos.'
+                    'Se eliminarán los datos actuales y se crearán 8 participantes con 32 gallos nuevos.'
               : 'Se crearán 8 participantes con 4 gallos cada uno (32 gallos en total).\n\n'
-                'Esto es útil para probar el sistema de sorteo y peleas.',
+                    'Esto es útil para probar el sistema de sorteo y peleas.',
         ),
         actions: [
           TextButton(
@@ -317,7 +371,7 @@ class DashboardScreen extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
             icon: Icon(hayDatos ? Icons.delete_forever : Icons.science),
-            style: hayDatos 
+            style: hayDatos
                 ? ElevatedButton.styleFrom(backgroundColor: Colors.orange)
                 : null,
             label: Text(hayDatos ? 'Resetear y Cargar' : 'Cargar Datos'),
@@ -341,7 +395,11 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(height: 16),
-                Text(hayDatos ? 'Limpiando y creando datos...' : 'Creando datos de prueba...'),
+                Text(
+                  hayDatos
+                      ? 'Limpiando y creando datos...'
+                      : 'Creando datos de prueba...',
+                ),
               ],
             ),
           ),
@@ -355,7 +413,7 @@ class DashboardScreen extends StatelessWidget {
       } else {
         await SeedData.poblarDeterministico(state);
       }
-      
+
       if (context.mounted) {
         Navigator.pop(context); // Cerrar loading
         ScaffoldMessenger.of(context).showSnackBar(
@@ -369,10 +427,7 @@ class DashboardScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pop(context); // Cerrar loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -446,7 +501,7 @@ class DashboardScreen extends StatelessWidget {
           await PdfService.exportarBrackets(state);
           break;
       }
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -538,6 +593,45 @@ class _ActionButton extends StatelessWidget {
       label: Text(label),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      ),
+    );
+  }
+}
+
+class _RetiroChip extends StatelessWidget {
+  final String icon;
+  final String label;
+  final Color color;
+
+  const _RetiroChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }

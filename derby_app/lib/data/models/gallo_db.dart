@@ -8,7 +8,7 @@ class GalloDb {
   Id id = Isar.autoIncrement;
 
   /// ID único del engine
-  @Index(unique: true)
+  @Index()
   late String uid;
 
   /// ID del participante dueño

@@ -37,7 +37,8 @@ class HojaFisicaScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.print),
                 tooltip: 'Exportar/Imprimir',
-                onPressed: () => _mostrarOpcionesExportar(context, state, rondaVM),
+                onPressed: () =>
+                    _mostrarOpcionesExportar(context, state, rondaVM),
               ),
               PopupMenuButton<int>(
                 icon: const Icon(Icons.layers),
@@ -142,7 +143,7 @@ class HojaFisicaScreen extends StatelessWidget {
               _buildInfoChip(Icons.sports_mma, '${rondaVM.totalPeleas} Peleas'),
               _buildInfoChip(
                 Icons.check_circle_outline,
-                '${rondaVM.peleasFinalizadas} Finalizadas',
+                '${rondaVM.peleasTerminadas} Terminadas',
               ),
             ],
           ),
@@ -523,12 +524,20 @@ class HojaFisicaScreen extends StatelessWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.check_box_outline_blank, color: Colors.blue),
+              leading: const Icon(
+                Icons.check_box_outline_blank,
+                color: Colors.blue,
+              ),
               title: const Text('Hoja Vacía'),
               subtitle: const Text('Sin resultados - para anotar a mano'),
               onTap: () {
                 Navigator.pop(ctx);
-                _exportarHoja(context, state, rondaVM, mostrarResultados: false);
+                _exportarHoja(
+                  context,
+                  state,
+                  rondaVM,
+                  mostrarResultados: false,
+                );
               },
             ),
             ListTile(

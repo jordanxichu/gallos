@@ -57,7 +57,7 @@ const GalloDbSchema = CollectionSchema(
     r'uid': IndexSchema(
       id: 8193695471701937315,
       name: r'uid',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -172,60 +172,6 @@ List<IsarLinkBase<dynamic>> _galloDbGetLinks(GalloDb object) {
 
 void _galloDbAttach(IsarCollection<dynamic> col, Id id, GalloDb object) {
   object.id = id;
-}
-
-extension GalloDbByIndex on IsarCollection<GalloDb> {
-  Future<GalloDb?> getByUid(String uid) {
-    return getByIndex(r'uid', [uid]);
-  }
-
-  GalloDb? getByUidSync(String uid) {
-    return getByIndexSync(r'uid', [uid]);
-  }
-
-  Future<bool> deleteByUid(String uid) {
-    return deleteByIndex(r'uid', [uid]);
-  }
-
-  bool deleteByUidSync(String uid) {
-    return deleteByIndexSync(r'uid', [uid]);
-  }
-
-  Future<List<GalloDb?>> getAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uid', values);
-  }
-
-  List<GalloDb?> getAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uid', values);
-  }
-
-  Future<int> deleteAllByUid(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uid', values);
-  }
-
-  int deleteAllByUidSync(List<String> uidValues) {
-    final values = uidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uid', values);
-  }
-
-  Future<Id> putByUid(GalloDb object) {
-    return putByIndex(r'uid', object);
-  }
-
-  Id putByUidSync(GalloDb object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUid(List<GalloDb> objects) {
-    return putAllByIndex(r'uid', objects);
-  }
-
-  List<Id> putAllByUidSync(List<GalloDb> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uid', objects, saveLinks: saveLinks);
-  }
 }
 
 extension GalloDbQueryWhereSort on QueryBuilder<GalloDb, GalloDb, QWhere> {

@@ -176,9 +176,31 @@ class GallosScreen extends StatelessWidget {
     GalloVM galloVM,
     int index,
   ) {
+    final estado = galloVM.gallo.estado;
+    final esInactivo = estado != EstadoGallo.activo;
+
+    Color? colorBorde;
+    Color? colorFondo;
+    if (estado == EstadoGallo.retirado) {
+      colorBorde = galloVM.estaMuerto ? Colors.brown : Colors.orange;
+      colorFondo = colorBorde.withOpacity(0.05);
+    } else if (estado == EstadoGallo.descalificado) {
+      colorBorde = Colors.red;
+      colorFondo = Colors.red.withOpacity(0.05);
+    }
+
     return Card(
+      color: colorFondo,
+      shape: colorBorde != null
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: colorBorde, width: 2),
+            )
+          : null,
       child: InkWell(
-        onTap: () => _mostrarFormulario(context, state, galloVM.gallo),
+        onTap: esInactivo
+            ? null
+            : () => _mostrarFormulario(context, state, galloVM.gallo),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -188,17 +210,50 @@ class GallosScreen extends StatelessWidget {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).primaryColor.withOpacity(0.1),
+                    backgroundColor: esInactivo
+                        ? Colors.grey.shade300
+                        : Theme.of(context).primaryColor.withOpacity(0.1),
                     child: Text(
                       '${index + 1}',
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
+                        color: esInactivo
+                            ? Colors.grey
+                            : Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+                  // P1-4: Badge de estado si no está activo
+                  if (esInactivo) ...[
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: galloVM.tooltipEstado,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: galloVM.estaMuerto
+                              ? Colors.brown
+                              : (estado == EstadoGallo.retirado
+                                    ? Colors.orange
+                                    : Colors.red),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          galloVM.estadoBadge.isNotEmpty
+                              ? galloVM.estadoBadge
+                              : galloVM.estadoLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   PopupMenuButton<String>(
                     itemBuilder: (context) => [
@@ -212,6 +267,39 @@ class GallosScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      // P1-4: Opciones de retiro/descalificación
+                      if (galloVM.gallo.estado == EstadoGallo.activo) ...[
+                        const PopupMenuItem(
+                          value: 'retirar',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.remove_circle_outline,
+                                size: 20,
+                                color: Colors.orange,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Retirar',
+                                style: TextStyle(color: Colors.orange),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'descalificar',
+                          child: Row(
+                            children: [
+                              Icon(Icons.block, size: 20, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'Descalificar',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
@@ -231,6 +319,10 @@ class GallosScreen extends StatelessWidget {
                         _mostrarFormulario(context, state, galloVM.gallo);
                       } else if (value == 'eliminar') {
                         _confirmarEliminar(context, state, galloVM);
+                      } else if (value == 'retirar') {
+                        _confirmarRetirar(context, state, galloVM);
+                      } else if (value == 'descalificar') {
+                        _confirmarDescalificar(context, state, galloVM);
                       }
                     },
                   ),
@@ -263,6 +355,64 @@ class GallosScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+              if (esInactivo) ...[
+                const SizedBox(height: 4),
+                Text(
+                  galloVM.estadoDetalleVisible,
+                  style: TextStyle(
+                    color: galloVM.estaDescalificado
+                        ? Colors.red.shade700
+                        : (galloVM.estaMuerto
+                              ? Colors.brown.shade700
+                              : Colors.orange.shade700),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              // Indicador de compadres
+              Builder(
+                builder: (ctx) {
+                  final compadresIds = galloVM.participante?.compadres ?? [];
+                  if (compadresIds.isEmpty) return const SizedBox.shrink();
+                  final nombres = compadresIds
+                      .map(
+                        (id) =>
+                            state.participantes
+                                .where((p) => p.id == id)
+                                .map((p) => p.nombre)
+                                .firstOrNull ??
+                            id,
+                      )
+                      .join(', ');
+                  return Tooltip(
+                    message: 'No puede enfrentarse con: $nombres',
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.handshake,
+                            size: 12,
+                            color: Colors.orange.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${compadresIds.length} compadre${compadresIds.length > 1 ? 's' : ''}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.orange.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -437,6 +587,187 @@ class GallosScreen extends StatelessWidget {
               ).showSnackBar(const SnackBar(content: Text('Gallo eliminado')));
             },
             child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // P1-4: Confirmar retiro de gallo
+  void _confirmarRetirar(
+    BuildContext context,
+    DerbyState state,
+    GalloVM galloVM,
+  ) {
+    final motivoController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.remove_circle_outline, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('Retirar Gallo'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Retirar el gallo "${galloVM.anillo}"?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Dueño: ${galloVM.nombreParticipante}'),
+            const SizedBox(height: 16),
+            const Text(
+              'Al retirar un gallo:\n'
+              '• Sus peleas pendientes se cancelarán\n'
+              '• No podrá participar en rondas futuras\n'
+              '• Las peleas ya finalizadas NO cambian',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: motivoController,
+              decoration: const InputDecoration(
+                labelText: 'Motivo del retiro (opcional)',
+                hintText: 'Ej: Lesión, muerte, decisión del dueño...',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            onPressed: () async {
+              try {
+                await state.retirarGallo(
+                  galloVM.id,
+                  motivo: motivoController.text.trim().isEmpty
+                      ? null
+                      : motivoController.text.trim(),
+                );
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gallo ${galloVM.anillo} retirado'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Retirar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // P1-4: Confirmar descalificación de gallo
+  void _confirmarDescalificar(
+    BuildContext context,
+    DerbyState state,
+    GalloVM galloVM,
+  ) {
+    final motivoController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.block, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('Descalificar Gallo'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Descalificar el gallo "${galloVM.anillo}"?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text('Dueño: ${galloVM.nombreParticipante}'),
+            const SizedBox(height: 16),
+            const Text(
+              'Al descalificar un gallo:\n'
+              '• Sus peleas pendientes se cancelarán\n'
+              '• No podrá participar en rondas futuras\n'
+              '• Las peleas ya finalizadas NO cambian\n'
+              '• Se registrará como DESCALIFICACIÓN',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: motivoController,
+              decoration: const InputDecoration(
+                labelText: 'Motivo de la descalificación',
+                hintText: 'Ej: Peso fuera de rango, trampa, etc.',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              try {
+                await state.descalificarGallo(
+                  galloVM.id,
+                  motivo: motivoController.text.trim().isEmpty
+                      ? null
+                      : motivoController.text.trim(),
+                );
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gallo ${galloVM.anillo} DESCALIFICADO'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(dialogContext);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Descalificar'),
           ),
         ],
       ),

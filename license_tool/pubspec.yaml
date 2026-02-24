@@ -1,0 +1,13 @@
+name: license_tool
+description: Herramienta de administración para generar licencias firmadas para DerbyMaster
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  pointycastle: ^3.9.1
+  crypto: ^3.0.6
+  args: ^2.5.0
+
+executables:
+  license_tool: main
