@@ -288,8 +288,9 @@ class PeleasScreen extends StatelessWidget {
     return Card(
       elevation: peleaVM.completada ? 1 : 4,
       color: peleaVM.completada ? Colors.grey.shade100 : null,
+      clipBehavior: Clip.none,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
         child: Column(
           children: [
             // Header
@@ -399,27 +400,35 @@ class PeleasScreen extends StatelessWidget {
                     ],
                   )
                 else if (!peleaVM.completada) ...[
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        _iniciarPeleaEnVivo(context, state, peleaVM),
-                    icon: const Icon(Icons.play_arrow, size: 18),
-                    label: const Text('Empezar'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _iniciarPeleaEnVivo(context, state, peleaVM),
+                      icon: const Icon(Icons.play_arrow, size: 20),
+                      label: const Text('Empezar'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(130, 48),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () =>
-                        _mostrarRegistroRapido(context, state, peleaVM),
-                    icon: const Icon(Icons.flash_on, size: 16),
-                    label: const Text('Rápido'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                  SizedBox(
+                    height: 48,
+                    child: TextButton.icon(
+                      onPressed: () =>
+                          _mostrarRegistroRapido(context, state, peleaVM),
+                      icon: const Icon(Icons.flash_on, size: 20),
+                      label: const Text('Rápido'),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(110, 48),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                     ),
                   ),
