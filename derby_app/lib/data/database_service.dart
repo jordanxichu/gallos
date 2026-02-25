@@ -17,10 +17,10 @@ class DatabaseService {
   static Future<Isar> get instance async {
     if (_isar != null) return _isar!;
 
-    // Usar Application Support en macOS (siempre permitido en sandbox)
-    // En otras plataformas usar Documents
+    // En desktop usar Application Support (evita Documents en Windows).
+    // En móvil/web se mantiene Documents.
     final Directory dir;
-    if (Platform.isMacOS) {
+    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
       dir = await getApplicationSupportDirectory();
     } else {
       dir = await getApplicationDocumentsDirectory();

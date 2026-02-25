@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:derby_engine/derby_engine.dart';
 import '../viewmodels/viewmodels.dart';
 import '../services/license_manager.dart';
+import '../data/database_service.dart';
+import 'historial_screen.dart';
 
 /// Pantalla de configuración del derby.
 class ConfiguracionScreen extends StatefulWidget {
@@ -305,13 +307,26 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   const Text(
                     'Exporta todos los datos del derby actual a un archivo JSON.',
                   ),
+                  if (!state.permiteBackup)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        '⚠️ Exportar backup requiere licencia Pro',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 16,
                     runSpacing: 12,
                     children: [
                       ElevatedButton.icon(
-                        onPressed: () => _exportarBackup(context, state),
+                        onPressed: state.permiteBackup
+                            ? () => _exportarBackup(context, state)
+                            : null,
                         icon: const Icon(Icons.backup),
                         label: const Text('Exportar backup JSON'),
                       ),
@@ -327,22 +342,64 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                 const SizedBox(height: 32),
 
                 _buildSeccion('Historial de Modificaciones', [
-                  if (state.historialEventos.isEmpty)
-                    const Text('Sin cambios registrados todavía.'),
-                  if (state.historialEventos.isNotEmpty)
-                    ...state.historialEventos
-                        .take(20)
-                        .map(
-                          (evento) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.history, size: 18),
-                            title: Text(evento.descripcion),
-                            subtitle: Text(
-                              '${evento.tipo.toUpperCase()} · ${_formatearFechaHora(evento.timestamp)}',
-                            ),
-                          ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          state.historialEventos.isEmpty
+                              ? 'Sin cambios registrados'
+                              : '${state.historialEventos.length} eventos registrados',
                         ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const HistorialScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.history),
+                        label: const Text('Ver Historial'),
+                      ),
+                    ],
+                  ),
+                ]),
+
+                const SizedBox(height: 32),
+
+                _buildSeccion('Mantenimiento de Base de Datos', [
+                  const Text(
+                    'Opciones para solucionar problemas con la base de datos local.',
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _repararLicencias(context, state),
+                        icon: const Icon(Icons.healing),
+                        label: const Text('Reparar Licencias'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _verRutaBaseDatos(context),
+                        icon: const Icon(Icons.folder_open),
+                        label: const Text('Ver Ruta BD'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Si las licencias no se activan correctamente, usa "Reparar Licencias" '
+                    'para limpiar datos corruptos.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ]),
 
                 const SizedBox(height: 32),
@@ -603,15 +660,144 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     }
   }
 
+  Future<void> _repararLicencias(BuildContext context, DerbyState state) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.healing, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Reparar Licencias'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Esta acción limpiará los datos de licencia de la base de datos local.',
+            ),
+            SizedBox(height: 12),
+            Text('Esto puede resolver problemas como:'),
+            Text('• Licencias que no se activan'),
+            Text('• Errores de "Ya existe una licencia activa"'),
+            Text('• Datos corruptos de licencias anteriores'),
+            SizedBox(height: 12),
+            Text(
+              'Después de reparar, necesitarás activar tu licencia de nuevo.',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reparar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !context.mounted) return;
+
+    try {
+      await state.repararLicencias();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ Licencias reparadas. Puedes activar de nuevo.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al reparar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _verRutaBaseDatos(BuildContext context) async {
+    try {
+      final isar = await DatabaseService.instance;
+      final ruta = isar.directory;
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.folder, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Ubicación de la Base de Datos'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('La base de datos se encuentra en:'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  ruta ?? 'No disponible',
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Esta información es útil para soporte técnico.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: ruta ?? ''));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Ruta copiada')));
+              },
+              child: const Text('Copiar ruta'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   String _formatearFecha(DateTime fecha) {
     return '${fecha.day.toString().padLeft(2, '0')}/'
         '${fecha.month.toString().padLeft(2, '0')}/'
         '${fecha.year}';
-  }
-
-  String _formatearFechaHora(DateTime fecha) {
-    return '${_formatearFecha(fecha)} '
-        '${fecha.hour.toString().padLeft(2, '0')}:'
-        '${fecha.minute.toString().padLeft(2, '0')}';
   }
 }

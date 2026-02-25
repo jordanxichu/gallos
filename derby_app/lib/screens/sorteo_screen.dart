@@ -69,7 +69,8 @@ class SorteoScreen extends StatelessWidget {
   }
 
   Widget _buildPreSorteo(BuildContext context, DerbyState state) {
-    final puedeIniciar = state.totalGallos >= 2;
+    final tieneGallosSuficientes = state.totalGallos >= 2;
+    final puedeIniciar = tieneGallosSuficientes && state.puedeGenerarSorteo;
     final config = state.config;
 
     return Padding(
@@ -257,6 +258,32 @@ class SorteoScreen extends StatelessWidget {
 
           const Spacer(),
 
+          // Advertencia de licencia demo
+          if (!state.puedeGenerarSorteo)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Card(
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Modo demo: máximo ${state.maxRondasDemo} ronda(s). '
+                          'La configuración actual tiene ${state.config.numeroRondas} rondas. '
+                          'Activa licencia Pro o reduce el número de rondas.',
+                          style: TextStyle(color: Colors.orange.shade900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
           // Botón de iniciar
           SizedBox(
             width: double.infinity,
@@ -273,7 +300,7 @@ class SorteoScreen extends StatelessWidget {
             ),
           ),
 
-          if (!puedeIniciar) ...[
+          if (!tieneGallosSuficientes) ...[
             const SizedBox(height: 8),
             const Text(
               'Registra al menos 2 gallos para iniciar',

@@ -110,7 +110,13 @@ TwIDAQAB
   /// Inicializa el manager cargando licencia existente y fingerprint.
   Future<void> initialize() async {
     _deviceFingerprint = await DeviceFingerprint.generate();
-    _currentLicense = await _loadActiveLicense();
+    try {
+      _currentLicense = await _loadActiveLicense();
+    } catch (e) {
+      print('⚠️ Error cargando licencia. Reparando storage local: $e');
+      await _repairLicenseStorage();
+      _currentLicense = null;
+    }
   }
 
   /// Carga la licencia activa desde Isar (si existe).
@@ -269,20 +275,37 @@ TwIDAQAB
         ..activatedAt = DateTime.now();
 
       // 7. Guardar en Isar (reemplazar licencia anterior)
-      // Eliminar todas las licencias existentes primero para evitar conflictos
-      // de índice único.
-      final existentes = await _isar.licenseDbs.where().findAll();
-      if (existentes.isNotEmpty) {
-        final ids = existentes.map((l) => l.id).toList();
-        await _isar.writeTxn(() => _isar.licenseDbs.deleteAll(ids));
+      // Si hay corrupción en storage, intentar auto-reparación de SOLO licencias.
+      try {
+        await _replaceStoredLicense(license);
+      } catch (e) {
+        print(
+          '⚠️ Error guardando licencia. Intentando reparar storage de licencias: $e',
+        );
+        await _repairLicenseStorage();
+        await _replaceStoredLicense(license);
       }
-      await _isar.writeTxn(() => _isar.licenseDbs.put(license));
 
       _currentLicense = license;
       return ActivationResult.success;
     } catch (e) {
       return ActivationResult.parseError;
     }
+  }
+
+  Future<void> _replaceStoredLicense(LicenseDb license) async {
+    final existentes = await _isar.licenseDbs.where().findAll();
+    if (existentes.isNotEmpty) {
+      final ids = existentes.map((l) => l.id).toList();
+      await _isar.writeTxn(() => _isar.licenseDbs.deleteAll(ids));
+    }
+    await _isar.writeTxn(() => _isar.licenseDbs.put(license));
+  }
+
+  Future<void> _repairLicenseStorage() async {
+    await _isar.writeTxn(() async {
+      await _isar.licenseDbs.clear();
+    });
   }
 
   /// Parsea el código de licencia en payload y signature.
@@ -445,10 +468,41 @@ TwIDAQAB
 
   /// Elimina completamente la licencia (reset a demo).
   Future<void> reset() async {
-    await _isar.writeTxn(() async {
-      await _isar.licenseDbs.clear();
-    });
+    try {
+      await _isar.writeTxn(() async {
+        await _isar.licenseDbs.clear();
+      });
+    } catch (e) {
+      print('⚠️ Error en reset de licencias: $e');
+      // Intentar reparación más agresiva
+      await _repairLicenseStorage();
+    }
     _currentLicense = null;
+  }
+
+  /// Reparación completa del sistema de licencias.
+  /// Útil cuando hay datos corruptos que impiden activaciones.
+  Future<void> repairAndReset() async {
+    print('🔧 Iniciando reparación completa de licencias...');
+
+    try {
+      // 1. Limpiar la colección
+      await _isar.writeTxn(() async {
+        await _isar.licenseDbs.clear();
+      });
+      print('  ✓ Colección de licencias limpiada');
+    } catch (e) {
+      print('  ⚠️ Error limpiando colección: $e');
+    }
+
+    // 2. Regenerar fingerprint del dispositivo
+    DeviceFingerprint.clearCache();
+    _deviceFingerprint = await DeviceFingerprint.generate();
+    print('  ✓ Fingerprint regenerado');
+
+    // 3. Limpiar estado actual
+    _currentLicense = null;
+    print('✅ Reparación completa');
   }
 
   /// Obtiene mensaje legible del resultado de activación.

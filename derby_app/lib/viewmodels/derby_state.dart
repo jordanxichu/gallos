@@ -77,6 +77,11 @@ class DerbyState extends ChangeNotifier {
   bool get puedeAgregarParticipante =>
       _licenseManager?.canAddParticipante(_participantes.length) ?? true;
 
+  /// Verifica si la licencia permite generar más rondas.
+  /// En modo demo, se limita a maxRondasDemo rondas.
+  bool get puedeGenerarSorteo =>
+      _licenseManager?.canCreateRonda(_config.numeroRondas) ?? true;
+
   // === Getters de datos crudos (para el engine) ===
   Derby? get derby => _derby;
   List<Participante> get participantes => List.unmodifiable(_participantes);
@@ -666,6 +671,8 @@ class DerbyState extends ChangeNotifier {
   // === Acciones de Sorteo ===
 
   /// Ejecuta el sorteo generando todas las rondas.
+  ///
+  /// Lanza [StateError] en modo demo si se excede el límite de rondas.
   Future<void> ejecutarSorteo() async {
     await generarPreviewSorteo();
   }
@@ -675,6 +682,15 @@ class DerbyState extends ChangeNotifier {
       _error = 'Se necesitan al menos 2 gallos';
       notifyListeners();
       return;
+    }
+
+    // P0-LICENCIA: Verificar límite de rondas en modo demo
+    if (!puedeGenerarSorteo) {
+      throw StateError(
+        'Modo demo: máximo $maxRondasDemo ronda(s). '
+        'La configuración actual tiene ${_config.numeroRondas} rondas. '
+        'Reduce el número de rondas o activa licencia Pro.',
+      );
     }
 
     _cargando = true;
@@ -1167,6 +1183,7 @@ class DerbyState extends ChangeNotifier {
     return _licenseManager?.getActivationMessage(result) ?? 'Error desconocido';
   }
 
+  /// Desactiva la licencia actual (vuelve a modo demo).
   Future<void> desactivarLicencia() async {
     await _licenseManager?.reset();
     notifyListeners();
@@ -1176,7 +1193,27 @@ class DerbyState extends ChangeNotifier {
     );
   }
 
+  /// Reparación completa del sistema de licencias.
+  /// Útil cuando hay datos corruptos que impiden activaciones.
+  Future<void> repararLicencias() async {
+    await _licenseManager?.repairAndReset();
+    notifyListeners();
+    await _registrarEvento(
+      tipo: 'licencia',
+      descripcion: 'Sistema de licencias reparado',
+    );
+  }
+
+  /// Exporta todos los datos del torneo a JSON.
+  ///
+  /// Lanza [StateError] si la licencia no permite backups (modo demo).
   Future<String> exportarTorneoJson() async {
+    // P0-LICENCIA: Verificar si la licencia permite backups
+    if (!permiteBackup) {
+      throw StateError(
+        'Modo demo: exportar backup JSON requiere licencia Pro.',
+      );
+    }
     final warningsRetiro = <String>[];
 
     // Preparar resumen de retiros y descalificaciones
@@ -1480,6 +1517,26 @@ class DerbyState extends ChangeNotifier {
       final gallosData = data['gallos'] as List<dynamic>;
       final rondasData = data['rondas'] as List<dynamic>? ?? [];
       final warningsRetiro = <String>[];
+
+      // P0-LICENCIA: Validar límites de licencia ANTES de importar
+      if (!licenciaPro) {
+        final numParticipantes = participantesData.length;
+        final numRondas = rondasData.length;
+
+        if (numParticipantes > maxParticipantesDemo) {
+          throw StateError(
+            'Modo demo: el backup tiene $numParticipantes participantes, '
+            'pero el límite es $maxParticipantesDemo. Activa licencia Pro.',
+          );
+        }
+
+        if (numRondas > maxRondasDemo) {
+          throw StateError(
+            'Modo demo: el backup tiene $numRondas rondas, '
+            'pero el límite es $maxRondasDemo. Activa licencia Pro.',
+          );
+        }
+      }
 
       // 1. Limpiar datos actuales
       _participantes.clear();

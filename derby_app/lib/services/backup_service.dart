@@ -15,20 +15,50 @@ class ImportResult {
 }
 
 class BackupService {
+  /// Obtiene el directorio para exportar archivos (Escritorio o Documentos).
+  /// En Windows, crea una carpeta "DerbyManager" en C:\ProgramData para datos,
+  /// pero exporta a Documentos/DerbyManager para exportaciones visibles al usuario.
+  Future<Directory> _getExportDir() async {
+    final Directory dir;
+
+    if (Platform.isWindows) {
+      // En Windows, crear carpeta en Documentos/DerbyManager
+      final docs = await getApplicationDocumentsDirectory();
+      dir = Directory('${docs.path}${Platform.pathSeparator}DerbyManager');
+    } else if (Platform.isMacOS || Platform.isLinux) {
+      // En macOS/Linux, usar la carpeta de Application Support
+      final support = await getApplicationSupportDirectory();
+      dir = Directory('${support.path}${Platform.pathSeparator}exports');
+    } else {
+      // Móvil: usar Documents
+      final docs = await getApplicationDocumentsDirectory();
+      dir = Directory('${docs.path}${Platform.pathSeparator}DerbyManager');
+    }
+
+    // Crear si no existe
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+
+    return dir;
+  }
+
   /// Exporta contenido CSV a un archivo y lo abre.
   /// Retorna la ruta del archivo creado.
   Future<String> exportarCsv(String content, String filename) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$filename');
+    final dir = await _getExportDir();
+    final file = File('${dir.path}${Platform.pathSeparator}$filename');
     await file.writeAsString(content, flush: true);
     await _abrirArchivo(file.path);
     return file.path;
   }
 
   Future<String> exportarJson(Map<String, dynamic> payload) async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await _getExportDir();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final file = File('${dir.path}/derby_backup_$timestamp.json');
+    final file = File(
+      '${dir.path}${Platform.pathSeparator}derby_backup_$timestamp.json',
+    );
 
     final pretty = const JsonEncoder.withIndent('  ').convert(payload);
     await file.writeAsString(pretty);
