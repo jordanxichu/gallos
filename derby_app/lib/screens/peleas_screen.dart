@@ -377,8 +377,10 @@ class PeleasScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Acciones
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 if (rondaBloqueada)
                   // P0-2: Indicador de bloqueo
@@ -400,22 +402,39 @@ class PeleasScreen extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: () =>
                         _iniciarPeleaEnVivo(context, state, peleaVM),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Empezar pelea'),
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    label: const Text('Empezar'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: () =>
                         _mostrarRegistroRapido(context, state, peleaVM),
-                    icon: const Icon(Icons.flash_on, size: 18),
+                    icon: const Icon(Icons.flash_on, size: 16),
                     label: const Text('Rápido'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                    ),
                   ),
                 ] else ...[
                   TextButton.icon(
                     onPressed: () =>
                         _deshacerResultado(context, state, peleaVM),
-                    icon: const Icon(Icons.undo, size: 18),
+                    icon: const Icon(Icons.undo, size: 16),
                     label: const Text('Deshacer'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                    ),
                   ),
                 ],
               ],
