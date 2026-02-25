@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build Windows MSIX
 
 on:
   push:
@@ -32,9 +32,12 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
-      - name: Upload Windows artifact
+      - name: Create MSIX installer
+        run: dart run msix:create
+
+      - name: Upload MSIX installer
         uses: actions/upload-artifact@v4
         with:
-          name: derby-windows-release
-          path: derby_app/build/windows/x64/runner/Release/
+          name: derby-windows-msix
+          path: derby_app/build/windows/x64/runner/Release/*.msix
           if-no-files-found: error
