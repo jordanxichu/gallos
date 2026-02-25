@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models/models.dart';
@@ -6,6 +7,11 @@ import 'models/models.dart';
 /// Servicio singleton para manejar la base de datos Isar.
 class DatabaseService {
   static Isar? _isar;
+
+  /// Nombre de la base de datos según el modo de compilación.
+  /// Esto evita que datos de desarrollo aparezcan en releases.
+  static String get _databaseName =>
+      kDebugMode ? 'derby_manager_dev' : 'derby_manager';
 
   /// Obtiene la instancia de Isar, inicializando si es necesario.
   static Future<Isar> get instance async {
@@ -26,6 +32,7 @@ class DatabaseService {
     }
 
     print('📁 Isar directory: ${dir.path}');
+    print('📦 Database name: $_databaseName (${kDebugMode ? "DEBUG" : "RELEASE"})');
 
     _isar = await Isar.open(
       [
@@ -38,7 +45,7 @@ class DatabaseService {
         AuditLogDbSchema,
       ],
       directory: dir.path,
-      name: 'derby_manager',
+      name: _databaseName,
     );
 
     print('✅ Isar initialized successfully');
