@@ -288,167 +288,95 @@ class PeleasScreen extends StatelessWidget {
     return Card(
       elevation: peleaVM.completada ? 1 : 4,
       color: peleaVM.completada ? Colors.grey.shade100 : null,
-      clipBehavior: Clip.none,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-        child: Column(
-          children: [
-            // Header
-            Row(
-              children: [
-                CircleAvatar(radius: 16, child: Text('${index + 1}')),
-                const SizedBox(width: 8),
-                Text(
-                  'Pelea ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                if (peleaVM.completada)
-                  Chip(
-                    label: const Text('Finalizada'),
-                    backgroundColor: Colors.green,
-                    labelStyle: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: rondaBloqueada
+            ? null
+            : () => peleaVM.completada
+                ? _deshacerResultado(context, state, peleaVM)
+                : _iniciarPeleaEnVivo(context, state, peleaVM),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Header
+              Row(
+                children: [
+                  CircleAvatar(radius: 16, child: Text('${index + 1}')),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pelea ${index + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  if (rondaBloqueada)
+                    Icon(Icons.lock, size: 18, color: Colors.orange.shade700)
+                  else if (peleaVM.completada)
+                    const Icon(Icons.check_circle, size: 20, color: Colors.green)
+                  else
+                    Icon(Icons.touch_app, size: 18, color: Colors.grey.shade500),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Competidores
+              Row(
+                children: [
+                  // Lado Rojo
+                  Expanded(
+                    child: _buildLadoCompetidor(
+                      context: context,
+                      anillo: peleaVM.anilloRojo,
+                      peso: peleaVM.pesoRojoFormateado,
+                      nombreParticipante: peleaVM.nombreParticipanteRojo,
+                      color: const Color(0xFF8B0000), // Rojo oscuro
+                      esGanador: peleaVM.ganoRojo,
+                      completada: peleaVM.completada,
                     ),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
                   ),
-              ],
-            ),
 
-            const SizedBox(height: 12),
-
-            // Competidores
-            Row(
-              children: [
-                // Lado Rojo
-                Expanded(
-                  child: _buildLadoCompetidor(
-                    context: context,
-                    anillo: peleaVM.anilloRojo,
-                    peso: peleaVM.pesoRojoFormateado,
-                    nombreParticipante: peleaVM.nombreParticipanteRojo,
-                    color: const Color(0xFF8B0000), // Rojo oscuro
-                    esGanador: peleaVM.ganoRojo,
-                    completada: peleaVM.completada,
-                  ),
-                ),
-
-                // VS
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'VS',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                      if (peleaVM.completada &&
-                          peleaVM.duracionSegundos != null)
-                        Text(
-                          peleaVM.duracionFormateada,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                  // VS
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'VS',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
                           ),
                         ),
-                    ],
-                  ),
-                ),
-
-                // Lado Verde
-                Expanded(
-                  child: _buildLadoCompetidor(
-                    context: context,
-                    anillo: peleaVM.anilloVerde,
-                    peso: peleaVM.pesoVerdeFormateado,
-                    nombreParticipante: peleaVM.nombreParticipanteVerde,
-                    color: const Color(0xFF2E7D32), // Verde oscuro
-                    esGanador: peleaVM.ganoVerde,
-                    completada: peleaVM.completada,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Acciones
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (rondaBloqueada)
-                  // P0-2: Indicador de bloqueo
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.lock, size: 16, color: Colors.orange.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Bloqueada',
-                        style: TextStyle(
-                          color: Colors.orange.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  )
-                else if (!peleaVM.completada) ...[
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: () =>
-                          _iniciarPeleaEnVivo(context, state, peleaVM),
-                      icon: const Icon(Icons.play_arrow, size: 20),
-                      label: const Text('Empezar'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(130, 48),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
-                        ),
-                      ),
+                        if (peleaVM.completada &&
+                            peleaVM.duracionSegundos != null)
+                          Text(
+                            peleaVM.duracionFormateada,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  SizedBox(
-                    height: 48,
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          _mostrarRegistroRapido(context, state, peleaVM),
-                      icon: const Icon(Icons.flash_on, size: 20),
-                      label: const Text('Rápido'),
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(110, 48),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  TextButton.icon(
-                    onPressed: () =>
-                        _deshacerResultado(context, state, peleaVM),
-                    icon: const Icon(Icons.undo, size: 16),
-                    label: const Text('Deshacer'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+
+                  // Lado Verde
+                  Expanded(
+                    child: _buildLadoCompetidor(
+                      context: context,
+                      anillo: peleaVM.anilloVerde,
+                      peso: peleaVM.pesoVerdeFormateado,
+                      nombreParticipante: peleaVM.nombreParticipanteVerde,
+                      color: const Color(0xFF2E7D32), // Verde oscuro
+                      esGanador: peleaVM.ganoVerde,
+                      completada: peleaVM.completada,
                     ),
                   ),
                 ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
