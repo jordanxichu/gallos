@@ -122,3 +122,4 @@ msix_config:
   msix_version: 1.0.0.0
   languages: es-MX, es-ES, en-US
   capabilities: internetClient
+  install_certificate: false
