@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/derby_state.dart';
 import '../services/pdf_service.dart';
+import '../core/test_keys.dart';
 
 /// Pantalla de sorteo - genera las rondas usando el motor de matching.
 class SorteoScreen extends StatelessWidget {
@@ -289,6 +290,7 @@ class SorteoScreen extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
+              key: SorteoKeys.btnGenerarPreview,
               onPressed: puedeIniciar
                   ? () => state.generarPreviewSorteo()
                   : null,
@@ -452,12 +454,14 @@ class SorteoScreen extends StatelessWidget {
                   Row(
                     children: [
                       OutlinedButton.icon(
+                        key: SorteoKeys.btnDescartarSorteo,
                         onPressed: () => state.descartarPreviewSorteo(),
                         icon: const Icon(Icons.close),
                         label: const Text('Descartar Preview'),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
+                        key: SorteoKeys.btnAprobarSorteo,
                         onPressed: () => state.aprobarPreviewSorteo(),
                         icon: const Icon(Icons.check),
                         label: const Text('Aprobar Rondas'),

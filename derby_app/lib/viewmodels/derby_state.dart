@@ -485,7 +485,21 @@ class DerbyState extends ChangeNotifier {
     }
   }
 
+  /// Elimina un gallo del torneo.
+  ///
+  /// Lanza [StateError] si ya hay sorteo realizado.
+  /// En ese caso, usar [retirarGallo] o [descalificarGallo] en su lugar.
   Future<void> eliminarGallo(String id) async {
+    // No permitir eliminar gallos si ya hay sorteo
+    if (sorteoRealizado) {
+      final gallo = _gallos.where((g) => g.id == id).firstOrNull;
+      final anillo = gallo?.anillo ?? id;
+      throw StateError(
+        'No se puede eliminar el gallo "$anillo" porque ya hay sorteo realizado.\n'
+        'Usa "Retirar" o "Descalificar" en su lugar para mantener la integridad de los datos.',
+      );
+    }
+
     _gallos.removeWhere((g) => g.id == id);
     notifyListeners();
     await _repo.eliminarGallo(id);

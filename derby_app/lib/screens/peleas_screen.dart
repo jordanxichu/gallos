@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/viewmodels.dart';
 import '../services/pdf_service.dart';
+import '../core/test_keys.dart';
 import 'hoja_fisica_screen.dart';
 
 /// Pantalla de peleas en tiempo real - para registrar ganadores.
@@ -117,6 +118,7 @@ class PeleasScreen extends StatelessWidget {
         // P0-2: Banner de ronda bloqueada
         if (rondaBloqueada)
           Container(
+            key: PeleasKeys.bannerRondaBloqueada,
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.orange.shade100,
@@ -134,6 +136,7 @@ class PeleasScreen extends StatelessWidget {
                   ),
                 ),
                 TextButton.icon(
+                  key: PeleasKeys.btnDesbloquearRonda,
                   onPressed: () => _confirmarDesbloqueo(context, state),
                   icon: Icon(Icons.lock_open, color: Colors.orange.shade800),
                   label: Text(
@@ -293,8 +296,8 @@ class PeleasScreen extends StatelessWidget {
         onTap: rondaBloqueada
             ? null
             : () => peleaVM.completada
-                ? _deshacerResultado(context, state, peleaVM)
-                : _iniciarPeleaEnVivo(context, state, peleaVM),
+                  ? _deshacerResultado(context, state, peleaVM)
+                  : _iniciarPeleaEnVivo(context, state, peleaVM),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -312,9 +315,17 @@ class PeleasScreen extends StatelessWidget {
                   if (rondaBloqueada)
                     Icon(Icons.lock, size: 18, color: Colors.orange.shade700)
                   else if (peleaVM.completada)
-                    const Icon(Icons.check_circle, size: 20, color: Colors.green)
+                    const Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: Colors.green,
+                    )
                   else
-                    Icon(Icons.touch_app, size: 18, color: Colors.grey.shade500),
+                    Icon(
+                      Icons.touch_app,
+                      size: 18,
+                      color: Colors.grey.shade500,
+                    ),
                 ],
               ),
 
@@ -647,261 +658,6 @@ class PeleasScreen extends StatelessWidget {
           duration: const Duration(seconds: 2),
         ),
       );
-    }
-  }
-
-  void _mostrarRegistroRapido(
-    BuildContext context,
-    DerbyState state,
-    PeleaVM peleaVM,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Registro rápido - Pelea ${peleaVM.numero}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(
-                  Icons.sports_martial_arts,
-                  color: Color(0xFF8B0000),
-                ),
-                title: Text('Ganó Rojo (${peleaVM.anilloRojo})'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _registrarGanador(
-                    context,
-                    state,
-                    peleaVM,
-                    peleaVM.galloRojoId,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.handshake),
-                title: const Text('Empate'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _registrarEmpate(context, state, peleaVM);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.sports_martial_arts,
-                  color: Color(0xFF2E7D32),
-                ),
-                title: Text('Ganó Verde (${peleaVM.anilloVerde})'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _registrarGanador(
-                    context,
-                    state,
-                    peleaVM,
-                    peleaVM.galloVerdeId,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // P0-3: Registrar ganador con CONFIRMACIÓN obligatoria
-  Future<void> _registrarGanador(
-    BuildContext context,
-    DerbyState state,
-    PeleaVM peleaVM,
-    String ganadorId,
-  ) async {
-    final esRojo = ganadorId == peleaVM.galloRojoId;
-    final anilloGanador = esRojo ? peleaVM.anilloRojo : peleaVM.anilloVerde;
-    final nombreGanador = esRojo
-        ? peleaVM.nombreParticipanteRojo
-        : peleaVM.nombreParticipanteVerde;
-    final colorGanador = esRojo ? 'ROJO' : 'VERDE';
-
-    // P0-3: Diálogo de confirmación obligatorio
-    final confirmar = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar resultado'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¿Confirmar que GANÓ $colorGanador?',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  Icons.emoji_events,
-                  color: esRojo
-                      ? const Color(0xFF8B0000)
-                      : const Color(0xFF2E7D32),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Anillo: $anilloGanador',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text('Dueño: $nombreGanador'),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Ronda ${state.rondaSeleccionada + 1} · Pelea ${peleaVM.numero}',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: esRojo
-                  ? const Color(0xFF8B0000)
-                  : const Color(0xFF2E7D32),
-            ),
-            child: Text('Confirmar $colorGanador'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmar != true || !context.mounted) return;
-
-    try {
-      await state.registrarResultado(
-        indexRonda: state.rondaSeleccionada,
-        peleaId: peleaVM.id,
-        ganadorId: ganadorId,
-      );
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '✓ Ganador registrado: $anilloGanador ($colorGanador)',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } on StateError catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  // P0-3: Registrar empate con CONFIRMACIÓN obligatoria
-  Future<void> _registrarEmpate(
-    BuildContext context,
-    DerbyState state,
-    PeleaVM peleaVM,
-  ) async {
-    // P0-3: Diálogo de confirmación obligatorio
-    final confirmar = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar resultado'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '¿Confirmar EMPATE?',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.handshake, color: Colors.orange),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${peleaVM.anilloRojo} vs ${peleaVM.anilloVerde}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${peleaVM.nombreParticipanteRojo} vs ${peleaVM.nombreParticipanteVerde}',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Ronda ${state.rondaSeleccionada + 1} · Pelea ${peleaVM.numero}',
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Confirmar Empate'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmar != true || !context.mounted) return;
-
-    try {
-      await state.registrarResultado(
-        indexRonda: state.rondaSeleccionada,
-        peleaId: peleaVM.id,
-        empate: true,
-      );
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Empate registrado'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } on StateError catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-        );
-      }
     }
   }
 

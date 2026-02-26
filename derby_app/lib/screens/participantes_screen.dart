@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:derby_engine/derby_engine.dart';
 import '../viewmodels/viewmodels.dart';
+import '../core/test_keys.dart';
 
 /// Pantalla de gestión de participantes.
 class ParticipantesScreen extends StatelessWidget {
@@ -25,6 +26,7 @@ class ParticipantesScreen extends StatelessWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
+            key: ParticipantesKeys.fabAgregarParticipante,
             onPressed: () {
               if (!state.puedeAgregarParticipante) {
                 _mostrarMensajeLicencia(context, state.maxParticipantesDemo);

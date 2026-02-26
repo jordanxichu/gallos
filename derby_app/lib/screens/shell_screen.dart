@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/test_keys.dart';
 import 'dashboard_screen.dart';
 import 'participantes_screen.dart';
 import 'gallos_screen.dart';
@@ -23,36 +24,43 @@ class _ShellScreenState extends State<ShellScreen> {
       icon: Icons.dashboard_outlined,
       selectedIcon: Icons.dashboard,
       label: 'Dashboard',
+      key: ShellKeys.navDashboard,
     ),
     _NavItem(
       icon: Icons.people_outline,
       selectedIcon: Icons.people,
       label: 'Participantes',
+      key: ShellKeys.navParticipantes,
     ),
     _NavItem(
       icon: Icons.pets_outlined,
       selectedIcon: Icons.pets,
       label: 'Gallos',
+      key: ShellKeys.navGallos,
     ),
     _NavItem(
       icon: Icons.shuffle_outlined,
       selectedIcon: Icons.shuffle,
       label: 'Sorteo',
+      key: ShellKeys.navSorteo,
     ),
     _NavItem(
       icon: Icons.sports_mma_outlined,
       selectedIcon: Icons.sports_mma,
       label: 'Peleas',
+      key: ShellKeys.navPeleas,
     ),
     _NavItem(
       icon: Icons.leaderboard_outlined,
       selectedIcon: Icons.leaderboard,
       label: 'Resultados',
+      key: ShellKeys.navResultados,
     ),
     _NavItem(
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings,
       label: 'Config',
+      key: ShellKeys.navConfiguracion,
     ),
   ];
 
@@ -120,7 +128,7 @@ class _ShellScreenState extends State<ShellScreen> {
             destinations: _navItems
                 .map(
                   (item) => NavigationRailDestination(
-                    icon: Icon(item.icon),
+                    icon: Icon(item.icon, key: item.key),
                     selectedIcon: Icon(item.selectedIcon),
                     label: Text(item.label),
                   ),
@@ -143,10 +151,12 @@ class _NavItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final Key key;
 
   const _NavItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    required this.key,
   });
 }

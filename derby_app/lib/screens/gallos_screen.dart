@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:derby_engine/derby_engine.dart';
 import '../viewmodels/viewmodels.dart';
+import '../core/test_keys.dart';
 
 /// Pantalla de gestión de gallos.
 class GallosScreen extends StatelessWidget {
@@ -26,6 +27,7 @@ class GallosScreen extends StatelessWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
+            key: GallosKeys.fabAgregarGallo,
             onPressed: hayParticipantes
                 ? () => _mostrarFormulario(context, state)
                 : null,
@@ -564,6 +566,37 @@ class GallosScreen extends StatelessWidget {
     DerbyState state,
     GalloVM galloVM,
   ) {
+    // Si hay sorteo, no permitir eliminar - sugerir retirar
+    if (state.sorteoRealizado) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('No se puede eliminar'),
+          content: Text(
+            'El gallo "${galloVM.anillo}" no puede eliminarse porque ya hay sorteo realizado.\n\n'
+            'Para remover este gallo del torneo, usa "Retirar" o "Descalificar" en su lugar. '
+            'Esto cancelará sus peleas pendientes automáticamente.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Entendido'),
+            ),
+            if (galloVM.estado == EstadoGallo.activo)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  _confirmarRetirar(context, state, galloVM);
+                },
+                child: const Text('Retirar Gallo'),
+              ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -655,7 +688,7 @@ class GallosScreen extends StatelessWidget {
                       ? null
                       : motivoController.text.trim(),
                 );
-                Navigator.pop(dialogContext);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -665,7 +698,7 @@ class GallosScreen extends StatelessWidget {
                   );
                 }
               } catch (e) {
-                Navigator.pop(dialogContext);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -746,7 +779,7 @@ class GallosScreen extends StatelessWidget {
                       ? null
                       : motivoController.text.trim(),
                 );
-                Navigator.pop(dialogContext);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -756,7 +789,7 @@ class GallosScreen extends StatelessWidget {
                   );
                 }
               } catch (e) {
-                Navigator.pop(dialogContext);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
